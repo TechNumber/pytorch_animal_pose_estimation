@@ -12,6 +12,19 @@ from vis import show_pose
 
 from torch.utils.tensorboard import SummaryWriter
 
+import random
+from pytorch_lightning import seed_everything
+
+
+def set_random_seed(s):
+    random.seed(s)
+    np.random.seed(s)
+    torch.manual_seed(s)
+    seed_everything(s, workers=True)
+
+
+SEED = 17
+
 # Load data
 batch_size = 10  # Кол-во записей в пакете, передаваемом нейросети за раз
 image_size = (128, 128)  # Размер входного изображения
@@ -49,6 +62,7 @@ class MSELoss(torch.nn.Module):  # Лосс-функция средний ква
 
 
 # Initialize the model
+set_random_seed(SEED)
 model = SimplePose().cuda()  # Инициализация модели и её выгрузка на ГПУ
 model.load_state_dict(torch.load('./weights/simplepose9.weights'))  # Загрузка pre-trained weights
 criterion = MSELoss().cuda()  # Инициализация объекта лосс-функции и его выгрузка на ГПУ
@@ -109,4 +123,4 @@ lsp_test_loader = dl_test.pytorch(
 # test_image, *_ = lsp_test_loader[np.random.randint(len(lsp_test_loader))]
 test_image, *_ = next(iter(lsp_test_loader))
 test_predictions = model(test_image[0].cuda())
-show_pose(test_image, test_predictions.squeeze().cpu().detach())
+show_pose(test_image[0], test_predictions.squeeze().cpu().detach())
