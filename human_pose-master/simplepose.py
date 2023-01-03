@@ -33,7 +33,7 @@ image_size = (128, 128)  # Размер входного изображения
 tform = transforms.Compose([  # Объявление трансформации для исходных изображений:
     transforms.ToPILImage(),
     transforms.Resize(image_size),  # Рескейл изображений до заданного размера
-    transforms.ToTensor(),  # Приведения исходного изображения к формату тензора
+    transforms.ToTensor(),  # Приведение исходного изображения к формату тензора
     # transforms.Normalize([0.5], [0.5]),
 ])
 
@@ -113,14 +113,14 @@ for epoch in range(1):
 
 dl_test = deeplake.load("hub://activeloop/lsp-test")
 lsp_test_loader = dl_test.pytorch(
-    tensors=["images", "keypoints"],
-    decode_method={'images': 'numpy'},
-    transform={'images': tform, 'keypoints': None},
+    tensors=["images", "keypoints", "images_visualized"],
+    decode_method={'images': 'numpy', 'images_visualized': 'numpy'},
+    transform={'images': tform, 'keypoints': None, 'images_visualized':tform},
     batch_size=batch_size, shuffle=True, num_workers=3
 )
 #
 # test_image, *_ = lsp_test_loader.__getitem__(np.random.randint(len(lsp_test_loader)))
 # test_image, *_ = lsp_test_loader[np.random.randint(len(lsp_test_loader))]
-test_image, *_ = next(iter(lsp_test_loader))
+test_image, _, test_result = next(iter(lsp_test_loader))
 test_predictions = model(test_image[0].cuda())
-show_pose(test_image[0], test_predictions.squeeze().cpu().detach())
+show_pose(test_image[0], test_predictions.squeeze().cpu().detach(), test_result[0])
