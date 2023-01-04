@@ -86,10 +86,15 @@ class LabelingAppApp:
         self.window.minsize(1000, 470)
 
 
-        self.frm_picture = ttk.Labelframe(self.window)
+        self.frm_labeling = ttk.Labelframe(self.window)
+        self.frm_labeling.configure(
+            height=420,
+            text='Image',
+            width=640)
+
+        self.frm_picture = ttk.Frame(self.frm_labeling)
         self.frm_picture.configure(
             height=360,
-            text='Image',
             width=640)
 
         self.pic = ImageTk.PhotoImage(
@@ -98,12 +103,27 @@ class LabelingAppApp:
                 (640, 360)
             )
         )
-        self.lbl_pic = ttk.Label(self.frm_picture, image=self.pic, cursor="tcross",)
-        self.lbl_pic.bind('<Motion>', self.pic_motion)
-        self.lbl_pic.pack(side="top")
+        # self.lbl_pic = ttk.Label(self.frm_picture, image=self.pic, cursor="tcross")
+        # self.lbl_pic.bind('<Motion>', self.pic_motion)
+        # self.lbl_pic.grid(row=0, column=0)
 
-        self.frm_picture.pack(padx=20, pady=20, side="left")
-        self.frm_picture.pack_propagate(False)
+        self.cnv_labeling = tk.Canvas(self.frm_picture,
+                                      width=self.pic.width(), height=self.pic.height(),
+                                      cursor='tcross', state='disabled')
+        self.cnv_labeling.bind('<Motion>', self.pic_motion, add='+')
+        self.cnv_labeling.bind('<Button-1>', self.pic_lmb_pressed, add='+')
+        self.cnv_labeling.grid(row=0, column=0)
+
+        self.img_cnv_labeling = self.cnv_labeling.create_image(0, 0, anchor='nw', image=self.pic)
+
+        self.frm_picture.pack(side='top')
+        # self.frm_picture.grid_propagate(False)
+
+        self.lbl_cursor_coord = ttk.Label(self.frm_labeling, text="In standby")
+        self.lbl_cursor_coord.pack(side='bottom', anchor='e', pady=10, padx=10)
+
+        self.frm_labeling.pack(padx=20, pady=20, side="left")
+        self.frm_labeling.pack_propagate(False)
 
 
         self.frm_controls = ttk.Frame(self.window)
@@ -137,7 +157,7 @@ class LabelingAppApp:
         self.lbl_kp_num.grid(column=0, pady=10, row=0)
 
         self.lbl_kp_name = ttk.Label(self.frm_keypoints)
-        self.lbl_kp_name.configure(text='Keypoint name')
+        self.lbl_kp_name.configure(text='Keypoint json key')
         self.lbl_kp_name.grid(column=1, pady=10, row=0)
 
         self.scr_frm_keypoints = ttk.Scrollbar(self.frm_keypoints)
@@ -173,10 +193,13 @@ class LabelingAppApp:
         self.btn_start.configure(text='Start')
         self.btn_start.pack(padx=10, pady=10, side="left")
         self.btn_start.bind("<Button>", self.start_labeling, add="")
+        self.labeling_started = False
 
         self.btn_cancel = ttk.Button(self.frm_buttons)
         self.btn_cancel.configure(text='Cancel')
         self.btn_cancel.pack(padx=10, pady=10, side="right")
+        self.btn_cancel.bind("<Button>", self.cancel_labeling, add="")
+        self.labeling_cancelled = False
 
         self.btn_choose = ttk.Button(self.frm_buttons)
         self.btn_choose.configure(text='Choose...')
@@ -206,11 +229,42 @@ class LabelingAppApp:
         pass
 
     def pic_motion(self, event):
-        x, y = event.x, event.y
-        print('{}, {}'.format(x, y))
+        if self.labeling_started:
+            x = round(event.x / self.cnv_labeling.winfo_width(), 3)
+            y = round(event.y / self.cnv_labeling.winfo_height(), 3)
+            if 0 <= x <= 1 and 0 <= y <= 1:
+                self.lbl_cursor_coord.configure(text=f'Now labeling: right_knee (7) [{x}, {y}]')
+            else:
+                self.lbl_cursor_coord.configure(text=f'Now labeling: right_knee (7) [out of bounds]')
+
+    def pic_lmb_pressed(self, event):
+        if self.labeling_started:
+            x, y = event.x, event.y
+            self.ovl_cnv_labeling = self.cnv_labeling.create_oval(
+                x, y, x + 10, y + 10, tags='keypoint',
+                fill='orange', outline='black', width=2)
 
     def start_labeling(self, event):
         print("Labeling started")
+        self.btn_start.configure(state='disabled')
+        self.btn_choose.configure(state='disabled')
+        self.sb_kp_count.configure(state='readonly')
+        for ent in self.ent_kp_label_list:
+            ent.configure(state='readonly')
+        self.labeling_started = True
+
+    def cancel_labeling(self, event):
+        if self.labeling_started:
+            self.labeling_started = False
+            print("Labeling ended")
+            self.cnv_labeling.delete("keypoint")
+            self.btn_start.configure(state='normal')
+            self.btn_choose.configure(state='normal')
+            self.sb_kp_count.configure(state='normal')
+            for ent in self.ent_kp_label_list:
+                ent.configure(state='normal')
+            self.lbl_cursor_coord.configure(text="In standby")
+
 
 if __name__ == "__main__":
     app = LabelingAppApp()
