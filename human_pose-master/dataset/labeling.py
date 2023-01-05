@@ -1,5 +1,9 @@
+import json
+import os
+import shutil
 import tkinter as tk
 import tkinter.ttk as ttk
+from tkinter import messagebox as mb
 from PIL import ImageTk, Image, ImageOps
 
 # WIN_WIDTH = 1280
@@ -77,6 +81,48 @@ from PIL import ImageTk, Image, ImageOps
 # Вкладки
 # Паддинг элементов
 
+
+class KeyPoint:
+    def __init__(self, name, x=0, y=0, is_visible=True):
+        self.name = name
+        self.x = x,
+        self.y = y,
+        self.is_visible = is_visible
+
+    def set_coord(self, x, y, is_visible):
+        self.is_visible = is_visible
+        self.x = x
+        self.y = y
+
+    def draw_kp(self, canvas):
+        canvas.create_oval(
+            self.x - 5, self.y - 5, self.x + 5, self.y + 5,
+            tags='keypoint',
+            fill='light green' if self.is_visible else 'orange',
+            outline='black',
+            width=1)
+
+
+class Picture:
+
+    def __init__(self, path):
+        self.path = path
+        self.name = self.path[self.path.rfind('/') + 1:]
+        self.canvas_pic = Image.open(self.path)
+        self.orig_height = self.canvas_pic.height
+        self.orig_width = self.canvas_pic.width
+        self.canvas_pic = ImageTk.PhotoImage(
+            ImageOps.contain(
+                self.canvas_pic,
+                (640, 360)
+            )
+        )
+
+    def draw_picture(self, canvas):
+        canvas.configure(width=self.canvas_pic.width(), height=self.canvas_pic.height())
+        canvas.create_image(0, 0, anchor='nw', image=self.canvas_pic, tags='image')
+
+
 class LabelingAppApp:
     def __init__(self, master=None):
         # build ui
@@ -97,24 +143,24 @@ class LabelingAppApp:
             height=360,
             width=640)
 
-        self.pic = ImageTk.PhotoImage(
-            ImageOps.contain(
-                Image.open('./unlabeled/1614520238_131-p-kot-na-belom-fone-208.jpg'),
-                (640, 360)
-            )
-        )
+        # self.pic = ImageTk.PhotoImage(
+        #     ImageOps.contain(
+        #         Image.open('./unlabeled/1614520238_131-p-kot-na-belom-fone-208.jpg'),
+        #         (640, 360)
+        #     )
+        # )
         # self.lbl_pic = ttk.Label(self.frm_picture, image=self.pic, cursor="tcross")
         # self.lbl_pic.bind('<Motion>', self.pic_motion)
         # self.lbl_pic.grid(row=0, column=0)
 
-        self.cnv_labeling = tk.Canvas(self.frm_picture,
-                                      width=self.pic.width(), height=self.pic.height(),
+        self.cnv_labeling = tk.Canvas(self.frm_picture, height=360, width=640,
                                       cursor='tcross', state='disabled')
         self.cnv_labeling.bind('<Motion>', self.pic_motion, add='+')
         self.cnv_labeling.bind('<Button-1>', self.pic_lmb_pressed, add='+')
+        self.cnv_labeling.bind('<Button-3>', self.pic_rmb_pressed, add='+')
         self.cnv_labeling.grid(row=0, column=0)
 
-        self.img_cnv_labeling = self.cnv_labeling.create_image(0, 0, anchor='nw', image=self.pic)
+        # self.img_cnv_labeling = self.cnv_labeling.create_image(0, 0, anchor='nw', image=self.pic, tags='image')
 
         self.frm_picture.pack(side='top')
         # self.frm_picture.grid_propagate(False)
@@ -168,15 +214,17 @@ class LabelingAppApp:
         self.ent_kp_label_def_values = [
             'head', 'upper_spine', 'left_shoulder', 'left_elbow', 'front_left_paw',
             'right_shoulder', 'right_elbow', 'front_right_paw',
-            'center_spine', 'bottom_spine', 'right_knee', 'right_heel', 'rear_right_paw',
-            'left_knee', 'left_heel', 'rear_left_paw'
+            'center_spine', 'bottom_spine', 'left_knee', 'left_heel', 'rear_left_paw',
+            'right_knee', 'right_heel', 'rear_right_paw'
         ]
-        self.lbl_kp_id_list = []
         self.ent_kp_label_list = []
+        self.kp_list = []
+        self.kp_id = 0
+        self.pic_id = 0
+        self.pic_labeling = None
         for i in range(16):
             lbl_kp_id = ttk.Label(self.frm_keypoints, text=str(i))
             lbl_kp_id.grid(row=i + 1, column=0)
-            self.lbl_kp_id_list.append(lbl_kp_id)
             ent_kp_label = ttk.Entry(self.frm_keypoints)
             ent_kp_label.insert(0, self.ent_kp_label_def_values[i])
             ent_kp_label.grid(row=i + 1, column=1, pady=2)
@@ -198,7 +246,7 @@ class LabelingAppApp:
         self.btn_cancel = ttk.Button(self.frm_buttons)
         self.btn_cancel.configure(text='Cancel')
         self.btn_cancel.pack(padx=10, pady=10, side="right")
-        self.btn_cancel.bind("<Button>", self.cancel_labeling, add="")
+        self.btn_cancel.bind("<Button>", self.cancel_pressed, add="")
         self.labeling_cancelled = False
 
         self.btn_choose = ttk.Button(self.frm_buttons)
@@ -228,42 +276,117 @@ class LabelingAppApp:
     def choose_path(self, event=None):
         pass
 
-    def pic_motion(self, event):
+    def update_coordinates(self, x, y):
         if self.labeling_started:
-            x = round(event.x / self.cnv_labeling.winfo_width(), 3)
-            y = round(event.y / self.cnv_labeling.winfo_height(), 3)
+            x = round(x / self.cnv_labeling.winfo_width(), 3)
+            y = round(y / self.cnv_labeling.winfo_height(), 3)
+            message = f'Now labeling: {self.kp_list[self.kp_id].name} ({self.kp_id})'
             if 0 <= x <= 1 and 0 <= y <= 1:
-                self.lbl_cursor_coord.configure(text=f'Now labeling: right_knee (7) [{x}, {y}]')
+                self.lbl_cursor_coord.configure(
+                    text=message + f' [{x}, {y}]')
             else:
-                self.lbl_cursor_coord.configure(text=f'Now labeling: right_knee (7) [out of bounds]')
+                self.lbl_cursor_coord.configure(text=message + ' [out of bounds]')
+
+    def pic_motion(self, event):
+        self.update_coordinates(event.x, event.y)
+
+    def get_unlabeled_pic(self):
+        if len(os.listdir('./unlabeled')) > 0:
+            self.kp_id = 0
+            self.pic_labeling = Picture('./unlabeled/' + os.listdir('./unlabeled')[0])
+            self.pic_labeling.draw_picture(self.cnv_labeling)
+        else:
+            self.cancel_labeling()
+            mb.showinfo('Labeling done', 'All images from chosen directory were labeled.')
+
+
+    def add_keypoint(self, x, y, is_visible):
+        if self.labeling_started:
+            self.update_coordinates(x, y)
+            self.kp_list[self.kp_id].set_coord(x, y, is_visible)
+            self.kp_list[self.kp_id].draw_kp(self.cnv_labeling)
+            self.kp_id += 1
+            if self.kp_id > 15:
+                if os.path.isfile('keypoints_annotations.json'):
+                    with open('keypoints_annotations.json') as f:
+                        json_data = json.load(f)
+                    self.pic_id = max(map(int, json_data['images'].keys())) + 1
+                else:
+                    json_data = {
+                        'info': "",
+                        'images': {},
+                        'keypoints': {}
+                    }
+                    self.pic_id = 0
+                json_data['images'][self.pic_id] = {
+                    "file_name": self.pic_labeling.name,
+                    "width": self.pic_labeling.orig_width,
+                    "height": self.pic_labeling.orig_height
+                }
+                json_data['keypoints'][self.pic_id] = dict()
+                for kp in self.kp_list:
+                    json_data['keypoints'][self.pic_id][kp.name] = [
+                        kp.x / self.pic_labeling.orig_width,
+                        kp.y / self.pic_labeling.orig_height,
+                        int(kp.is_visible)
+                    ]
+                with open('keypoints_annotations.json', 'w+') as f:
+                    json.dump(json_data, f, indent=4)
+                if not os.path.isdir('./labeled'):
+                    os.mkdir('./labeled')
+                shutil.move(self.pic_labeling.path, './labeled')
+                self.get_unlabeled_pic()
+            else:
+                self.update_coordinates(x, y)
 
     def pic_lmb_pressed(self, event):
-        if self.labeling_started:
-            x, y = event.x, event.y
-            self.ovl_cnv_labeling = self.cnv_labeling.create_oval(
-                x, y, x + 10, y + 10, tags='keypoint',
-                fill='orange', outline='black', width=2)
+        x, y = event.x, event.y
+        self.add_keypoint(x, y, is_visible=True)
+
+    def pic_rmb_pressed(self, event):
+        x, y = event.x, event.y
+        self.add_keypoint(x, y, is_visible=False)
+
 
     def start_labeling(self, event):
-        print("Labeling started")
-        self.btn_start.configure(state='disabled')
-        self.btn_choose.configure(state='disabled')
-        self.sb_kp_count.configure(state='readonly')
-        for ent in self.ent_kp_label_list:
-            ent.configure(state='readonly')
-        self.labeling_started = True
+        if len(os.listdir('./unlabeled')) > 0:
+            print("Labeling started")
+            self.btn_start.configure(state='disabled')
+            self.btn_choose.configure(state='disabled')
+            self.sb_kp_count.configure(state='readonly')
+            self.kp_list = []
+            for ent in self.ent_kp_label_list:
+                ent.configure(state='readonly')
+                self.kp_list.append(KeyPoint(ent.get().lower().replace(' ', '_')))
+            self.labeling_started = True
+            self.get_unlabeled_pic()
+            # self.pic = ImageTk.PhotoImage(
+            #     ImageOps.contain(
+            #         Image.open(self.pic_path),
+            #         (640, 360)
+            #     )
+            # )
+            # self.cnv_labeling.configure(width = self.pic.width(), height = self.pic.height())
+            # self.cnv_labeling.create_image(0, 0, anchor='nw', image=self.pic, tags='image')
+        else:
+            mb.showerror('No files', 'There are no files to label in chosen directory.')
 
-    def cancel_labeling(self, event):
+    def cancel_labeling(self):
         if self.labeling_started:
             self.labeling_started = False
             print("Labeling ended")
-            self.cnv_labeling.delete("keypoint")
+            self.cnv_labeling.delete('keypoint')
+            self.cnv_labeling.delete('image')
+            self.pic_labeling = None
             self.btn_start.configure(state='normal')
             self.btn_choose.configure(state='normal')
             self.sb_kp_count.configure(state='normal')
             for ent in self.ent_kp_label_list:
                 ent.configure(state='normal')
             self.lbl_cursor_coord.configure(text="In standby")
+
+    def cancel_pressed(self, event):
+        self.cancel_labeling()
 
 
 if __name__ == "__main__":
