@@ -114,7 +114,7 @@ class Picture:
         self.canvas_pic = ImageTk.PhotoImage(
             ImageOps.contain(
                 self.canvas_pic,
-                (640, 360)
+                (1280, 720)
             )
         )
 
@@ -128,32 +128,32 @@ class LabelingAppApp:
         # build ui
         self.window = tk.Tk() if master is None else tk.Toplevel(master)
         self.window.title("Labeling app")
-        self.window.configure(height=720, width=1280)
-        self.window.minsize(1000, 470)
+        self.window.configure(height=830, width=1620)
+        self.window.minsize(1620, 830)
 
 
         self.frm_labeling = ttk.Labelframe(self.window)
         self.frm_labeling.configure(
-            height=420,
+            height=780,
             text='Image',
-            width=640)
+            width=1280)
 
         self.frm_picture = ttk.Frame(self.frm_labeling)
         self.frm_picture.configure(
-            height=360,
-            width=640)
+            height=720,
+            width=1280)
 
         # self.pic = ImageTk.PhotoImage(
         #     ImageOps.contain(
         #         Image.open('./unlabeled/1614520238_131-p-kot-na-belom-fone-208.jpg'),
-        #         (640, 360)
+        #         (1280, 720)
         #     )
         # )
         # self.lbl_pic = ttk.Label(self.frm_picture, image=self.pic, cursor="tcross")
         # self.lbl_pic.bind('<Motion>', self.pic_motion)
         # self.lbl_pic.grid(row=0, column=0)
 
-        self.cnv_labeling = tk.Canvas(self.frm_picture, height=360, width=640,
+        self.cnv_labeling = tk.Canvas(self.frm_picture, height=720, width=1280,
                                       cursor='tcross', state='disabled')
         self.cnv_labeling.bind('<Motion>', self.pic_motion, add='+')
         self.cnv_labeling.bind('<Button-1>', self.pic_lmb_pressed, add='+')
@@ -326,8 +326,8 @@ class LabelingAppApp:
                 json_data['keypoints'][self.pic_id] = dict()
                 for kp in self.kp_list:
                     json_data['keypoints'][self.pic_id][kp.name] = [
-                        kp.x / self.pic_labeling.orig_width,
-                        kp.y / self.pic_labeling.orig_height,
+                        kp.x / self.cnv_labeling.winfo_width(),
+                        kp.y / self.cnv_labeling.winfo_height(),
                         int(kp.is_visible)
                     ]
                 with open('keypoints_annotations.json', 'w+') as f:
@@ -363,7 +363,7 @@ class LabelingAppApp:
             # self.pic = ImageTk.PhotoImage(
             #     ImageOps.contain(
             #         Image.open(self.pic_path),
-            #         (640, 360)
+            #         (1280, 720)
             #     )
             # )
             # self.cnv_labeling.configure(width = self.pic.width(), height = self.pic.height())
