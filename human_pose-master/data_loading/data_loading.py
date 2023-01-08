@@ -28,10 +28,15 @@ class AnimalKeypointsDataset(Dataset):
         image = Image.open(fp=image_path)
         keypoints = list(self.json_data['keypoints'][idx].values())
         keypoints = np.array(keypoints)
-        keypoints = keypoints.astype('float').reshape(-1, 3)
+        keypoints = keypoints.astype('float32').reshape(-1, 3)
         sample = {'image': image, 'keypoints': keypoints}
 
         if self.transform:
-            sample = self.transform(sample)
+            if 'image' in self.transform.keys() and self.transform['image'] is not None:
+                sample['image'] = self.transform['image'](sample['image'])
+            if 'keypoints' in self.transform.keys() and self.transform['keypoints'] is not None:
+                sample['keypoints'] = self.transform['keypoints'](sample['keypoints'])
 
         return sample
+
+    # class RandomRotation
