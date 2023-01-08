@@ -1,5 +1,5 @@
 .vscode/
-dataset/
+../dataset/
 .ipynb_checkpoints/
 test/
 __pycache__/

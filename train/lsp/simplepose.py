@@ -1,11 +1,8 @@
 import deeplake
-
-from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
 import torch
 
 from models.simplepose import SimplePose
-from models.datasets.lsp import LSPet, LSP
 
 import numpy as np
 from vis import show_pose
@@ -63,8 +60,8 @@ class MSELoss(torch.nn.Module):  # Лосс-функция средний ква
 
 # Initialize the model
 set_random_seed(SEED)
-model = SimplePose().cuda()  # Инициализация модели и её выгрузка на ГПУ
-model.load_state_dict(torch.load('./weights/simplepose9.weights'))  # Загрузка pre-trained weights
+model = SimplePose(14, False).cuda()  # Инициализация модели и её выгрузка на ГПУ
+model.load_state_dict(torch.load('../../weights/simplepose9.weights'))  # Загрузка pre-trained weights
 criterion = MSELoss().cuda()  # Инициализация объекта лосс-функции и его выгрузка на ГПУ
 optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)  # Инициализация оптимизатора
 
