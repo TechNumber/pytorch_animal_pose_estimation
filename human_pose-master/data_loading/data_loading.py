@@ -32,6 +32,11 @@ class AnimalKeypointsDataset(Dataset):
         sample = {'image': image, 'keypoints': keypoints}
 
         if self.transform:
-            sample = self.transform(sample)
+            if 'image' in self.transform.keys() and self.transform['image'] is not None:
+                sample['image'] = self.transform['image'](sample['image'])
+            if 'keypoints' in self.transform.keys() and self.transform['keypoints'] is not None:
+                sample['keypoints'] = self.transform['keypoints'](sample['keypoints'])
 
         return sample
+
+    # class RandomRotation
