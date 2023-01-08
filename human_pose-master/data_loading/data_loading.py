@@ -28,7 +28,7 @@ class AnimalKeypointsDataset(Dataset):
         image = Image.open(fp=image_path)
         keypoints = list(self.json_data['keypoints'][idx].values())
         keypoints = np.array(keypoints)
-        keypoints = keypoints.astype('float').reshape(-1, 3)
+        keypoints = keypoints.astype('float32').reshape(-1, 3)
         sample = {'image': image, 'keypoints': keypoints}
 
         if self.transform:
