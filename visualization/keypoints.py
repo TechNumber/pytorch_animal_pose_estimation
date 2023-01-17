@@ -1,4 +1,5 @@
 import PIL.Image
+import numpy as np
 import torch
 from matplotlib import pyplot as plt
 
@@ -38,9 +39,10 @@ def show_keypoints(image, keypoints, show_edges=False):
                      linewidth=2,
                      c=edge[2])
     else:
-        plt.scatter(keypoints[:, 0] * width,
+        cmap = np.array(['orange', 'green'])
+        sc = plt.scatter(keypoints[:, 0] * width,
                     keypoints[:, 1] * height,
                     s=30,
                     # marker='.',
                     edgecolors='black',
-                    c='orange')
+                    c=cmap[(keypoints[:, 2] >= 0.5).int()])

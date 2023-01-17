@@ -22,13 +22,15 @@ class MSECELoss(torch.nn.Module):
 
 
 def train():
-    INIT_WEIGHT_PATH = './weights/simplepose9.weights'
+    INIT_WEIGHT_PATH = '../../models/weights/simplepose9.weights'
     ALPHA = 0.0001
     IMAGE_SIZE = (128, 128)
-    EPOCHS = 2
-    BATCH_SIZE = 10
+    EPOCHS = 3000
+    BATCH_SIZE = 30
 
     set_random_seed(SEED)
+
+    t = transforms.ToPILImage()
 
     all_tform = transforms.Compose([
         RandomFlip(0.5, 0.5),
@@ -38,7 +40,7 @@ def train():
 
     img_tform = transforms.Compose([
         transforms.Resize(IMAGE_SIZE),
-        transforms.PILToTensor(),
+        transforms.ToTensor(),
     ])
 
     data_train = AnimalKeypointsDataset(
@@ -64,30 +66,48 @@ def train():
             train_img = batch_data['image'].cuda()
             train_kp = batch_data['keypoints'].cuda()
 
-            print(train_img.dtype, train_kp.dtype)
-
             pred_kp = model(train_img)
             pred_kp = pred_kp.view(pred_kp.shape[0], 16, 3)
             train_kp = train_kp.view(train_kp.shape[0], 16, 3)
 
-            loss = loss(pred_kp, train_kp)
-            loss.backward()
+            loss_value = loss(pred_kp, train_kp)
+            loss_value.backward()
             optimizer.step()
 
             if batch % 2:
-                print(f'Batch: {batch}, Loss: {loss.data}, Epoch: {epoch}')
+                print(f'Batch: {batch}, Loss: {loss_value.data}, Epoch: {epoch}')
 
-        t = transforms.ToPILImage()
-        plt.figure()
-        show_keypoints(
-            t(train_img[-1].cpu()),
-            pred_kp[-1].view(16, 3).squeeze().cpu().detach(),
-            show_edges=True
-        )
+        if epoch % 60 == 0:
+            # t = transforms.ToPILImage()
+            # plt.figure()
+            # show_keypoints(
+            #     t(train_img[-1].cpu()),
+            #     pred_kp[-1].view(16, 3).squeeze().cpu().detach(),
+            #     show_edges=True
+            # )
+            fig = plt.figure(figsize=(5, 5))
+            for i in range(4):
+                sample = data_train[i]
+
+                train_img = sample['image'].cuda()
+                train_img = train_img.unsqueeze(0)
+                pred_kp = model(train_img)
+                pred_kp = pred_kp.view(pred_kp.shape[0], 16, 3)
+
+                ax = plt.subplot(2, 2, i + 1)
+                plt.tight_layout()
+                ax.set_title('Sample #{}'.format(i))
+                ax.axis('off')
+                show_keypoints(
+                    t(train_img[-1].cpu()),
+                    pred_kp[-1].view(16, 3).squeeze().cpu().detach(),
+                    show_edges=i % 2
+                )
+            plt.show()
 
         # torch.cuda.empty_cache()
     torch.save(model.state_dict(),
-               ('./weights/LeNet128'
+               ('../../models/weights/LeNet128'
                 f'_A{str(ALPHA).replace(".", "o")}'
                 f'_E{EPOCHS}'
                 f'_B{BATCH_SIZE}'

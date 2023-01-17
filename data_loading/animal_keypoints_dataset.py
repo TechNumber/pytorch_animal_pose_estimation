@@ -35,6 +35,9 @@ class RandomRotation(object):
                 kp[0] = (x_c + R * cos(pi - asin((y - y_c) / R) - rad)) / w
                 kp[1] = (y_c + R * sin(pi - asin((y - y_c) / R) - rad)) / h
 
+            if not (0 <= kp[0] <= 1 and 0 <= kp[1] <= 1):  # TODO: create dedicated transformer for visibility check
+                kp[2] = 0
+
         image = TF.rotate(image, angle, expand=False, center=None)
 
         return {'image': image, 'keypoints': keypoints}
@@ -82,6 +85,9 @@ class RandomRatioCrop(object):
 
         keypoints[:, 1] = (keypoints[:, 1] - top_offset) / (crop_height * (1 - top_offset))
         keypoints[:, 0] = (keypoints[:, 0] - left_offset) / (crop_width * (1 - left_offset))
+
+        not_visible_idx = ((keypoints[:, :2] > 1) | (keypoints[:, :2] < 0)).any(1)
+        keypoints[not_visible_idx, 2] = 0
 
         image = TF.crop(
             image,

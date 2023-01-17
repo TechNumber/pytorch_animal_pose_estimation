@@ -1,1 +1,0 @@
-from . import animal_keypoints_dataset
