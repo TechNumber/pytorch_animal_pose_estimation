@@ -1,8 +1,18 @@
+import PIL.Image
+import numpy as np
+import torch
 from matplotlib import pyplot as plt
 
 
 def show_keypoints(image, keypoints, show_edges=False):
-    plt.figure()
+    assert isinstance(image, (torch.Tensor, PIL.Image.Image))
+    if isinstance(image, torch.Tensor):
+        width = image.shape[-2]
+        height = image.shape[-3]
+    else:
+        width = image.width
+        height = image.height
+
     plt.imshow(image)
     if show_edges:
         # Works only with default keypoints layout (16 points, default names from labeling app entries)
@@ -24,14 +34,15 @@ def show_keypoints(image, keypoints, show_edges=False):
             [14, 15, 'orange']
         ]
         for edge in edges:
-            plt.plot((keypoints[edge[0], 0] * image.width, keypoints[edge[1], 0] * image.width),
-                     (keypoints[edge[0], 1] * image.height, keypoints[edge[1], 1] * image.height),
+            plt.plot((keypoints[edge[0], 0] * width, keypoints[edge[1], 0] * width),
+                     (keypoints[edge[0], 1] * height, keypoints[edge[1], 1] * height),
                      linewidth=2,
                      c=edge[2])
     else:
-        plt.scatter(keypoints[:, 0] * image.width,
-                    keypoints[:, 1] * image.height,
+        cmap = np.array(['orange', 'green'])
+        sc = plt.scatter(keypoints[:, 0] * width,
+                    keypoints[:, 1] * height,
                     s=30,
                     # marker='.',
                     edgecolors='black',
-                    c='orange')
+                    c=cmap[(keypoints[:, 2] >= 0.5).int()])
