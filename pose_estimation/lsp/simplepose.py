@@ -120,4 +120,4 @@ lsp_test_loader = dl_test.pytorch(
 # test_image, *_ = lsp_test_loader[np.random.randint(len(lsp_test_loader))]
 test_image, _, test_result = next(iter(lsp_test_loader))
 test_predictions = model(test_image[0].cuda())
-show_pose(test_image[0], test_predictions.squeeze().cpu().detach(), test_result[0])
+show_pose(test_image[0], test_predictions.squeeze().detach().cpu(), test_result[0])

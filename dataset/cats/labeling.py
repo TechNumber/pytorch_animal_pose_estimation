@@ -291,9 +291,9 @@ class LabelingAppApp:
         self.update_coordinates(event.x, event.y)
 
     def get_unlabeled_pic(self):
-        if len(os.listdir('unlabeled')) > 0:
+        if len(os.listdir('./train/unlabeled')) > 0:
             self.kp_id = 0
-            self.pic_labeling = Picture('./unlabeled/' + os.listdir('unlabeled')[0])
+            self.pic_labeling = Picture('./train/unlabeled/' + os.listdir('./train/unlabeled')[0])
             self.pic_labeling.draw_picture(self.cnv_labeling)
         else:
             self.cancel_labeling()
@@ -332,9 +332,9 @@ class LabelingAppApp:
                     ]
                 with open('keypoints_annotations.json', 'w+') as f:
                     json.dump(json_data, f, indent=4)
-                if not os.path.isdir('labeled'):
-                    os.mkdir('labeled')
-                shutil.move(self.pic_labeling.path, 'labeled')
+                if not os.path.isdir('./train/labeled'):
+                    os.mkdir('./train/labeled')
+                shutil.move(self.pic_labeling.path, './train/labeled')
                 self.get_unlabeled_pic()
             else:
                 self.update_coordinates(x, y)
@@ -349,7 +349,7 @@ class LabelingAppApp:
 
 
     def start_labeling(self, event):
-        if len(os.listdir('unlabeled')) > 0:
+        if len(os.listdir('./train/unlabeled')) > 0:
             print("Labeling started")
             self.btn_start.configure(state='disabled')
             self.btn_choose.configure(state='disabled')

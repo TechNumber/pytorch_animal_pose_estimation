@@ -73,4 +73,4 @@ def show_hmap_cpm(image, hmap, joint):
     plt.imshow(t(image))
     for i, prediction in enumerate(hmap):
         plt.subplot(1, 7, i + 2)
-        plt.imshow(prediction.squeeze()[joint].squeeze().cpu().detach())
+        plt.imshow(prediction.squeeze()[joint].squeeze().detach().cpu())

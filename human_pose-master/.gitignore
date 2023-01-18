@@ -1,7 +1,0 @@
-.vscode/
-../dataset/
-.ipynb_checkpoints/
-test/
-__pycache__/
-*.weights
-runs/
