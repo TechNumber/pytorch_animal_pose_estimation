@@ -15,11 +15,11 @@ from pose_estimation.cats.test import test
 
 
 def train():
-    INIT_WEIGHT_PATH = '../../models/weights/lenet_3_128_aug_max/LeNet128_A0o0001_E500_B30.weights'
-    ALPHA = 0.0001
+    INIT_WEIGHT_PATH = '../../models/weights/lenet_3_128_aug_max/LeNet128_A0o0001_E2500_B200.weights'
+    ALPHA = 0.00001
     IMAGE_SIZE = (128, 128)
-    EPOCHS = 600
-    BATCH_SIZE = 30
+    EPOCHS = 2000
+    BATCH_SIZE = 200
 
     set_random_seed(SEED)
 
@@ -83,7 +83,7 @@ def train():
 
             optimizer.step()
 
-            if batch==0 and not epoch % 10:
+            if batch==0 and not epoch % 50:
                 print(f'Train batch: {batch}, Train batch loss: {loss_value.data}, Epoch: {epoch}')
 
         epoch_train_loss_list.append(np.average(batch_train_loss_list))
@@ -94,7 +94,7 @@ def train():
         else:
             min_epoch_test_loss_list.append(min_epoch_test_loss_list[-1])
 
-        if not epoch % 10:
+        if not epoch % 50:
             print(f'Test loss: {test_loss_value}, Epoch: {epoch}')
             plt.figure()
             plt.ylim((0, 150))
