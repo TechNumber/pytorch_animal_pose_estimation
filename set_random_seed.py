@@ -11,4 +11,4 @@ def set_random_seed(s):
     seed_everything(s, workers=True)
 
 
-SEED = 17
+SEED = 27
