@@ -1,145 +1,140 @@
+from typing import Optional
+
 import torch
+from torch import Tensor
+from torch import nn
 
 
-class InitialStage(torch.nn.Module):
-    def __init__(self, number_of_maps):
+class Conv2dBlock(nn.Module):
+    def __init__(
+            self,
+            in_ch: int,
+            out_ch: int,
+            ker_size: int,
+            pad: int = 0,
+            act: bool = False,
+            pool: bool = False
+    ):
         super().__init__()
-        self.number_of_maps = number_of_maps
 
-        self.conv_1 = torch.nn.Conv2d(in_channels=3, out_channels=64, kernel_size=9, padding=4)
-        self.conv_2 = torch.nn.Conv2d(in_channels=64, out_channels=64, kernel_size=9, padding=4)
-        self.conv_3 = torch.nn.Conv2d(in_channels=64, out_channels=64, kernel_size=9, padding=4)
-        self.conv_4 = torch.nn.Conv2d(in_channels=64, out_channels=16, kernel_size=5, padding=2)
-        self.conv_5 = torch.nn.Conv2d(in_channels=16, out_channels=256, kernel_size=9, padding=4)
-        self.conv_6 = torch.nn.Conv2d(in_channels=256, out_channels=256, kernel_size=1)
-        self.conv_7 = torch.nn.Conv2d(in_channels=256, out_channels=self.number_of_maps, kernel_size=1)
+        self.conv = nn.Conv2d(in_ch, out_ch, kernel_size=ker_size, padding=pad)
+        self.act = nn.GELU() if act else None
+        self.pool = nn.MaxPool2d(kernel_size=3, stride=2) if pool else None
 
-        self.act = torch.nn.ReLU()
-        self.pool = torch.nn.MaxPool2d(kernel_size=3, stride=2)
-
-    def forward(self, x):
-        x = self.conv_1(x)
-        x = self.act(x)
-        x = self.pool(x)
-
-        x = self.conv_2(x)
-        x = self.act(x)
-        x = self.pool(x)
-
-        x = self.conv_3(x)
-        x = self.act(x)
-        x = self.pool(x)
-
-        x = self.conv_4(x)
-        x = self.act(x)
-
-        x = self.conv_5(x)
-        x = self.act(x)
-
-        x = self.conv_6(x)
-        x = self.act(x)
-
-        x = self.conv_7(x)
-
+    def forward(self, x: Tensor) -> Tensor:
+        x = self.conv(x)
+        if self.act:
+            x = self.act(x)
+        if self.pool:
+            x = self.pool(x)
         return x
 
 
-class ImageFeature(torch.nn.Module):
-    def __init__(self):
+class ImageFeatureBlock(nn.Module):
+    def __init__(self, n_base_ch: int):
         super().__init__()
+        self.blocks = nn.ModuleList([
+            Conv2dBlock(3, n_base_ch, ker_size=9, pad=4, act=True, pool=True),
+            Conv2dBlock(n_base_ch, n_base_ch, ker_size=9, pad=4, act=True, pool=True),
+            Conv2dBlock(n_base_ch, n_base_ch, ker_size=9, pad=4, act=True, pool=True)
+        ])
 
-        self.conv_1 = torch.nn.Conv2d(in_channels=3, out_channels=64, kernel_size=9, padding=4)
-        self.conv_2 = torch.nn.Conv2d(in_channels=64, out_channels=64, kernel_size=9, padding=4)
-        self.conv_3 = torch.nn.Conv2d(in_channels=64, out_channels=64, kernel_size=9, padding=4)
-
-        self.act = torch.nn.ReLU()
-        self.pool = torch.nn.MaxPool2d(kernel_size=3, stride=2)
-
-    def forward(self, x):
-        x = self.conv_1(x)
-        x = self.act(x)
-        x = self.pool(x)
-
-        x = self.conv_2(x)
-        x = self.act(x)
-        x = self.pool(x)
-
-        x = self.conv_3(x)
-        x = self.act(x)
-        x = self.pool(x)
-
+    def forward(self, x: Tensor) -> Tensor:
+        for block in self.blocks:
+            x = block(x)
         return x
 
 
-class SubsequentStage(torch.nn.Module):
-    def __init__(self, number_of_maps, image_feat_channels):
+class InitialStage(nn.Module):
+    def __init__(self, n_maps: int, n_base_ch: int):
         super().__init__()
-        self.number_of_maps = number_of_maps
-        self.image_feat_channels = image_feat_channels
 
-        self.conv_1 = torch.nn.Conv2d(in_channels=64, out_channels=self.image_feat_channels, kernel_size=5, padding=2)
-        self.conv_2 = torch.nn.Conv2d(in_channels=self.number_of_maps + self.image_feat_channels, out_channels=64, kernel_size=11, padding=5)
-        self.conv_3 = torch.nn.Conv2d(in_channels=64, out_channels=64, kernel_size=11, padding=5)
-        self.conv_4 = torch.nn.Conv2d(in_channels=64, out_channels=64, kernel_size=11, padding=5)
-        self.conv_5 = torch.nn.Conv2d(in_channels=64, out_channels=64, kernel_size=1)
-        self.conv_6 = torch.nn.Conv2d(in_channels=64, out_channels=self.number_of_maps, kernel_size=1)
+        self.blocks = nn.ModuleList([
+            ImageFeatureBlock(n_base_ch),
+            Conv2dBlock(n_base_ch, n_base_ch // 4, ker_size=5, pad=2, act=True, pool=False),
+            Conv2dBlock(n_base_ch // 4, n_base_ch * 4, ker_size=9, pad=4, act=True, pool=False),
+            Conv2dBlock(n_base_ch * 4, n_base_ch * 4, ker_size=1, pad=0, act=True, pool=False),
+            Conv2dBlock(n_base_ch * 4, n_maps, ker_size=1, pad=0, act=False, pool=False)
+        ])
 
-        self.act = torch.nn.ReLU()
-
-    def forward(self, x, x_reference):
-        x_reference = self.conv_1(x_reference)
-        x_reference = self.act(x_reference)
-
-        x = torch.cat((x, x_reference), 1)
-
-        x = self.conv_2(x)
-        x = self.act(x)
-
-        x = self.conv_3(x)
-        x = self.act(x)
-
-        x = self.conv_4(x)
-        x = self.act(x)
-
-        x = self.conv_5(x)
-        x = self.act(x)
-
-        x = self.conv_6(x)
-
+    def forward(self, x: Tensor) -> Tensor:
+        for block in self.blocks:
+            x = block(x)
         return x
 
 
-class ConvolutionalPoseMachines(torch.nn.Module):
+class SubsequentStage(nn.Module):
+    def __init__(self, n_maps: int, img_feat_ch: int, n_base_ch: int):
+        super().__init__()
+
+        self.conv_1 = Conv2dBlock(n_base_ch, img_feat_ch, ker_size=5, pad=2, act=True, pool=False)
+
+        self.blocks = nn.ModuleList([
+            Conv2dBlock(n_maps + img_feat_ch, n_base_ch, ker_size=11, pad=5, act=True, pool=False),
+            Conv2dBlock(n_base_ch, n_base_ch, ker_size=11, pad=5, act=True, pool=False),
+            Conv2dBlock(n_base_ch, n_base_ch, ker_size=11, pad=5, act=True, pool=False),
+            Conv2dBlock(n_base_ch, n_base_ch, ker_size=1, pad=0, act=True, pool=False),
+            Conv2dBlock(n_base_ch, n_maps, ker_size=1, pad=0, act=False, pool=False)
+        ])
+
+    def forward(self, x: Tensor, img_ref: Tensor) -> Tensor:
+        img_ref = self.conv_1(img_ref)
+        x = torch.cat((x, img_ref), 1)
+        for block in self.blocks:
+            x = block(x)
+        return x
+
+
+class ConvolutionalPoseMachines(nn.Module):
 
     def __init__(self,
-                 keypoints,
-                 sub_stages,
+                 n_keypoints: int,
+                 n_substages: int,
+                 n_base_ch: int = 64,
+                 img_feat_ch: int = 16,
                  include_bground_map=False,
                  device=torch.device('cpu')):
         super().__init__()
-        self.sub_stages = sub_stages
-        self.keypoints = keypoints
-        self.include_bground_map = include_bground_map
 
-        self.init_stage = InitialStage(self.keypoints + self.include_bground_map).to(device)
-        self.image_feat = ImageFeature().to(device)
+        self.init_stage = InitialStage(
+            n_keypoints + include_bground_map,
+            n_base_ch
+        ).to(device)
+        self.img_feat = ImageFeatureBlock(n_base_ch).to(device)
 
-        self.subsequent_stages_list = torch.nn.ModuleList()
-        for i in range(sub_stages):
-            self.subsequent_stages_list.append(
-                SubsequentStage(
-                    number_of_maps=self.keypoints + self.include_bground_map,
-                    image_feat_channels=16).to(device)
-            )
+        self.subsequent_stages_list = nn.ModuleList(
+            [SubsequentStage(
+                n_keypoints + include_bground_map,
+                img_feat_ch=img_feat_ch,
+                n_base_ch=n_base_ch
+            ) for i in range(n_substages)]
+        ).to(device)
 
-    def forward(self, x):
-
-        # TODO: cat vs on-the-fly loss calculation
-
-        x_reference = self.image_feat(x)
+    def forward(self, x: Tensor) -> Tensor:
+        img_ref = self.img_feat(x)
         outputs = [self.init_stage(x)]
 
         for sub_stage in self.subsequent_stages_list:
-            outputs.append(sub_stage(outputs[-1], x_reference))
+            outputs.append(sub_stage(outputs[-1], img_ref))
 
         return torch.stack(outputs, dim=1)
+
+
+if __name__ == '__main__':
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+
+    input = torch.rand((5, 3, 368, 368), device=device)
+    print('Input shape:', input.shape)
+
+    model = ConvolutionalPoseMachines(
+        n_keypoints=16,
+        n_substages=3,
+        n_base_ch=128,
+        img_feat_ch=32,
+        device=device
+    )
+
+    output = model(input)
+    print('Output shape:', output.shape)
+    for c in model.children():
+        print(c)

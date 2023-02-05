@@ -80,6 +80,7 @@ if __name__ == '__main__':
     TEST_BATCH_SIZE = 4
     LOG_STEP = 30
     SAVE_MODEL_STEP = 90
+    START_EPOCH = 0
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
@@ -112,7 +113,13 @@ if __name__ == '__main__':
         heatmap=True)
     data_test_loader = DataLoader(data_test, batch_size=TEST_BATCH_SIZE, shuffle=True, num_workers=0)
 
-    model = ConvolutionalPoseMachines(keypoints=16, sub_stages=2, device=device)
+    model = ConvolutionalPoseMachines(
+        n_keypoints=16,
+        n_substages=2,
+        n_base_ch=64,
+        img_feat_ch=16,
+        device=device
+    )
     if os.path.isfile(INIT_WEIGHT_PATH):
         model.load_state_dict(torch.load(INIT_WEIGHT_PATH))
     else:
@@ -123,6 +130,7 @@ if __name__ == '__main__':
     model_saver = ModelSaver(model,
                              TRAIN_BATCH_SIZE,
                              save_freq=SAVE_MODEL_STEP,
+                             start_epoch=START_EPOCH,
                              loss=loss,
                              optimizer=optimizer)
 
