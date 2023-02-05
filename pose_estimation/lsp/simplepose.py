@@ -5,9 +5,7 @@ import torch
 from models.simplepose import SimplePose
 
 import numpy as np
-from vis import show_pose
-
-from torch.utils.tensorboard import SummaryWriter
+from visualization.vis import show_pose
 
 import random
 from pytorch_lightning import seed_everything

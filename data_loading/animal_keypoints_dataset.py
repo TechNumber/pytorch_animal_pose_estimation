@@ -19,7 +19,7 @@ def gaussian_peak(width, height, mean_x, mean_y, std_x, std_y):
 
 
 def create_heatmap(sample):
-    STD = 2
+    STD = 1.5
     image, keypoints = sample['image'], sample['keypoints'][0]
     nkp = len(keypoints)
     if isinstance(image, torch.Tensor):

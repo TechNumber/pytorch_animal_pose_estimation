@@ -307,8 +307,8 @@ class LabelingAppApp:
             self.kp_list[self.kp_id].draw_kp(self.cnv_labeling)
             self.kp_id += 1
             if self.kp_id > 15:
-                if os.path.isfile('keypoints_annotations.json'):
-                    with open('keypoints_annotations.json') as f:
+                if os.path.isfile('./train/keypoints_annotations.json'):
+                    with open('./train/keypoints_annotations.json') as f:
                         json_data = json.load(f)
                     self.pic_id = max(map(int, json_data['images'].keys())) + 1
                 else:
@@ -330,7 +330,7 @@ class LabelingAppApp:
                         kp.y / self.cnv_labeling.winfo_height(),
                         int(kp.is_visible)
                     ]
-                with open('keypoints_annotations.json', 'w+') as f:
+                with open('./train/keypoints_annotations.json', 'w+') as f:
                     json.dump(json_data, f, indent=4)
                 if not os.path.isdir('./train/labeled'):
                     os.mkdir('./train/labeled')
