@@ -92,15 +92,14 @@ class ConvolutionalPoseMachines(nn.Module):
                  n_substages: int,
                  n_base_ch: int = 64,
                  img_feat_ch: int = 16,
-                 include_bground_map=False,
-                 device=torch.device('cpu')):
+                 include_bground_map=False):
         super().__init__()
 
         self.init_stage = InitialStage(
             n_keypoints + include_bground_map,
             n_base_ch
-        ).to(device)
-        self.img_feat = ImageFeatureBlock(n_base_ch).to(device)
+        )
+        self.img_feat = ImageFeatureBlock(n_base_ch)
 
         self.subsequent_stages_list = nn.ModuleList(
             [SubsequentStage(
@@ -108,7 +107,7 @@ class ConvolutionalPoseMachines(nn.Module):
                 img_feat_ch=img_feat_ch,
                 n_base_ch=n_base_ch
             ) for i in range(n_substages)]
-        ).to(device)
+        )
 
     def forward(self, x: Tensor) -> Tensor:
         img_ref = self.img_feat(x)
@@ -130,9 +129,8 @@ if __name__ == '__main__':
         n_keypoints=16,
         n_substages=3,
         n_base_ch=128,
-        img_feat_ch=32,
-        device=device
-    )
+        img_feat_ch=32
+    ).to(device)
 
     output = model(input)
     print('Output shape:', output.shape)
