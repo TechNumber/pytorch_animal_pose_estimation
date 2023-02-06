@@ -24,12 +24,13 @@ def train(model,
           model_saver=None,
           logging_step=5,
           device=torch.device('cpu')):
-    t = transforms.ToPILImage()
+    model.to(device)
 
     epoch_train_loss_list = []
     epoch_test_loss_list = []
     min_epoch_test_loss_list = []
 
+    model.train()
     for epoch in range(epochs):
         batch_train_loss_list = []
         for batch, batch_data in enumerate(data_train):
@@ -72,14 +73,15 @@ def train(model,
 if __name__ == '__main__':
     set_random_seed(SEED)
 
-    INIT_WEIGHT_PATH = '../../models/weights/ConvolutionalPoseMachines_3_stages_(entire_model)/entire_model/v2/CPM368_aug_min_A1e-057_E20_B6.pth'
+    INIT_WEIGHT_PATH = '../../models/weights/ConvolutionalPoseMachines_4_stages/HMapsMSELoss/Adam_lr_1e-05_betas_(0o9_0o999)_eps_1e-08/ConvolutionalPoseMachines_E899_B5.pth'
     ALPHA = 0.00001
     IMAGE_SIZE = (368, 368)
-    EPOCHS = 1800
-    TRAIN_BATCH_SIZE = 6
-    TEST_BATCH_SIZE = 4
+    EPOCHS = 900
+    TRAIN_BATCH_SIZE = 5
+    TEST_BATCH_SIZE = 5
     LOG_STEP = 30
     SAVE_MODEL_STEP = 90
+    START_EPOCH = 900
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
@@ -112,7 +114,12 @@ if __name__ == '__main__':
         heatmap=True)
     data_test_loader = DataLoader(data_test, batch_size=TEST_BATCH_SIZE, shuffle=True, num_workers=0)
 
-    model = ConvolutionalPoseMachines(keypoints=16, sub_stages=2, device=device)
+    model = ConvolutionalPoseMachines(
+        n_keypoints=16,
+        n_substages=3,
+        n_base_ch=80,
+        img_feat_ch=20
+    ).to(device)
     if os.path.isfile(INIT_WEIGHT_PATH):
         model.load_state_dict(torch.load(INIT_WEIGHT_PATH))
     else:
@@ -123,6 +130,7 @@ if __name__ == '__main__':
     model_saver = ModelSaver(model,
                              TRAIN_BATCH_SIZE,
                              save_freq=SAVE_MODEL_STEP,
+                             start_epoch=START_EPOCH,
                              loss=loss,
                              optimizer=optimizer)
 
