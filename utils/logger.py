@@ -1,3 +1,4 @@
+import os.path
 from typing import Union, Optional
 
 import wandb
@@ -43,11 +44,13 @@ class Logger:
                 k: v for k, v in opt_params.items() if k not in ['params', 'lr'] and v is not None
             }
 
+        if not os.path.exists('./wandb_runs'):
+            os.mkdir('./wandb_runs')
         # TODO: .env
         self.run = wandb.init(
-            # dir='./wandb_runs',
+            dir='./wandb_runs',
             project="animal_pose_estimation",
-            # name=f"experiment_}",
+            anonymous='must',
             config=self.config
         )
 

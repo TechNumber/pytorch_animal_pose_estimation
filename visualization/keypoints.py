@@ -5,7 +5,7 @@ import torchvision.transforms as transforms
 from matplotlib import pyplot as plt
 
 
-def show_keypoints(image, keypoints, show_edges=False, ax=None):
+def show_keypoints(image, keypoints, show_edges=False, ax=None, as_fig=False):
     assert isinstance(image, (torch.Tensor, PIL.Image.Image))
 
     if not ax:
@@ -56,7 +56,11 @@ def show_keypoints(image, keypoints, show_edges=False, ax=None):
             edgecolors='black',
             c=cmap[(keypoints[:, 2] >= 0.5).int()]
         )
-    return ax
+    if as_fig:
+        fig = plt.figure(figsize=(1, 1))
+        fig.axes.append(ax)
+
+    return fig if as_fig else ax
 
 
 def show_hmaps(hmaps, img=None, kp_names=None):
@@ -73,7 +77,7 @@ def show_hmaps(hmaps, img=None, kp_names=None):
     figs_list = []
 
     for i in range(n_kp):
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=(1, 1))
         ax.axis('off')
         if kp_names:
             ax.set_title(kp_names[i])

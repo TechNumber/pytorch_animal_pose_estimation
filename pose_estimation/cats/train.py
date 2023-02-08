@@ -87,10 +87,10 @@ def train(model,
 if __name__ == '__main__':
     set_random_seed(SEED)
 
-    INIT_WEIGHT_PATH = '../../models/weights/ConvolutionalPoseMachines_4_stages/HMapsMSELoss/Adam_lr_1e-05___betas_(0o9_0o999)_eps_1e-08/ConvolutionalPoseMachines_E899_B5.pth'
+    INIT_WEIGHT_PATH = '../../models/weights/ConvolutionalPoseMachines___4_stages/HMapsMSELoss/Adam_lr_1e-05___betas_(0o9_0o999)_eps_1e-08/ConvolutionalPoseMachines_E899_B5.pth'
     ALPHA = 0.00001
     IMAGE_SIZE = (368, 368)
-    EPOCHS = 10
+    EPOCHS = 5
     TRAIN_BATCH_SIZE = 5
     TEST_BATCH_SIZE = 5
     # LOG_STEP = 30
@@ -159,7 +159,8 @@ if __name__ == '__main__':
         loss=loss,
         optimizer=optimizer,
         n_substages=N_SUBSTAGES,
-        dataset='cats'
+        dataset='cats',
+        start_epoch=START_EPOCH
     )
 
     train(
