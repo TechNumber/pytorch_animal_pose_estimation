@@ -8,7 +8,9 @@ from matplotlib import pyplot as plt
 def show_keypoints(image, keypoints, show_edges=False, ax=None, as_fig=False):
     assert isinstance(image, (torch.Tensor, PIL.Image.Image))
 
-    if not ax:
+    if as_fig:
+        fig, ax = plt.subplots(figsize=(2, 2))
+    elif not ax:
         ax = plt.gca()
 
     if isinstance(image, torch.Tensor):
@@ -56,9 +58,6 @@ def show_keypoints(image, keypoints, show_edges=False, ax=None, as_fig=False):
             edgecolors='black',
             c=cmap[(keypoints[:, 2] >= 0.5).int()]
         )
-    if as_fig:
-        fig = plt.figure(figsize=(1, 1))
-        fig.axes.append(ax)
 
     return fig if as_fig else ax
 
@@ -77,7 +76,7 @@ def show_hmaps(hmaps, img=None, kp_names=None):
     figs_list = []
 
     for i in range(n_kp):
-        fig, ax = plt.subplots(figsize=(1, 1))
+        fig, ax = plt.subplots(figsize=(2, 2))
         ax.axis('off')
         if kp_names:
             ax.set_title(kp_names[i])

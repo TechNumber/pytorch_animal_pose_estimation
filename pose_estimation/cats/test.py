@@ -45,7 +45,7 @@ def test(model,
             table.add_data(wandb.Image(true_kp_img), wandb.Image(pred_kp_img), *map(wandb.Image, pred_hmaps_imgs))
             # for img, pred, targ, prob in zip(images.to("cpu"), predicted.to("cpu"), labels.to("cpu"), probs.to("cpu")):
             #     table.add_data(wandb.Image(img[0].numpy() * 255), pred, targ, *prob.numpy())
-            wandb.log({"predictions_table": table}, commit=True)
+            wandb.log({"predictions_table": table}, commit=False)
 
     avg_loss_value = np.average(loss_value_list)
 

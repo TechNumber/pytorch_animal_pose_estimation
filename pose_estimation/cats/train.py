@@ -90,7 +90,7 @@ if __name__ == '__main__':
     INIT_WEIGHT_PATH = '../../models/weights/ConvolutionalPoseMachines___4_stages/HMapsMSELoss/Adam_lr_1e-05___betas_(0o9_0o999)_eps_1e-08/ConvolutionalPoseMachines_E899_B5.pth'
     ALPHA = 0.00001
     IMAGE_SIZE = (368, 368)
-    EPOCHS = 5
+    EPOCHS = 7
     TRAIN_BATCH_SIZE = 5
     TEST_BATCH_SIZE = 5
     # LOG_STEP = 30
