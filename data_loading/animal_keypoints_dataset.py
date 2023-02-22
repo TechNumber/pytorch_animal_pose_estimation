@@ -53,6 +53,8 @@ class AnimalKeypointsDataset(Dataset):
         if torch.is_tensor(idx):
             idx = idx.tolist()
 
+        # TODO: replace python iterables with numpy iterables
+
         idx = str(idx)
         image_name = self.json_data['images'][idx]['file_name']
         image_path = os.path.join(self.image_dir, image_name)

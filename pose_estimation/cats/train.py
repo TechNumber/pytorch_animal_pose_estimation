@@ -118,7 +118,7 @@ if __name__ == '__main__':
                    'image': img_tform,
                    'keypoints': transforms.ToTensor()},
         heatmap=True)
-    data_train_loader = DataLoader(data_train, batch_size=TRAIN_BATCH_SIZE, shuffle=True, num_workers=0)
+    data_train_loader = DataLoader(data_train, batch_size=TRAIN_BATCH_SIZE, shuffle=True, num_workers=3)
 
     data_test = AnimalKeypointsDataset(
         json_file_path='../../dataset/cats/test/keypoints_annotations.json',
@@ -127,7 +127,7 @@ if __name__ == '__main__':
                    'image': img_tform,
                    'keypoints': transforms.ToTensor()},
         heatmap=True)
-    data_test_loader = DataLoader(data_test, batch_size=TEST_BATCH_SIZE, shuffle=True, num_workers=0)
+    data_test_loader = DataLoader(data_test, batch_size=TEST_BATCH_SIZE, shuffle=True, num_workers=3)
 
     model = ConvolutionalPoseMachines(
         n_keypoints=16,

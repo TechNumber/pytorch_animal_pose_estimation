@@ -33,7 +33,7 @@ tform = transforms.Compose([  # Объявление трансформации 
 ])
 
 # lsp = LSPet('./models/datasets/lspet_dataset/', transform, image_size)
-# lsp_loader = DataLoader(lsp, batch_size, shuffle=True, num_workers=1)
+# lsp_loader = DataLoader(lsp, batch_size, shuffle=True, num_workers=3)
 
 dl_train = deeplake.load("hub://activeloop/lsp-train")  # Получение данных
 # Создание объекта, позволяющего итерировать данные
