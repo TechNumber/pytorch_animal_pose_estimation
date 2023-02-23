@@ -13,6 +13,7 @@ from utils.set_random_seed import set_random_seed, SEED
 from utils.losses import HMapsMSELoss
 from utils.model_saver import ModelSaver
 from utils.transforms import RandomRotation, RandomFlip, RandomRatioCrop
+from utils.logger import Logger
 
 
 def train(model,
@@ -21,14 +22,16 @@ def train(model,
           loss,
           optimizer,
           epochs,
+          logger=None,
           model_saver=None,
-          logging_step=5,
           device=torch.device('cpu')):
     model.to(device)
 
-    epoch_train_loss_list = []
-    epoch_test_loss_list = []
-    min_epoch_test_loss_list = []
+    if logger:
+        logger.watch(model)
+
+    min_test_loss = 0
+    min_test_loss_epoch = 0
 
     model.train()
     for epoch in range(epochs):
@@ -47,41 +50,53 @@ def train(model,
 
             optimizer.step()
 
-        epoch_train_loss_list.append(np.average(batch_train_loss_list))
-        test_loss_value = test(model, loss, data_test, device)
-        epoch_test_loss_list.append(test_loss_value)
-        if not len(min_epoch_test_loss_list) or test_loss_value < min_epoch_test_loss_list[-1]:
-            min_epoch_test_loss_list.append(test_loss_value)
-        else:
-            min_epoch_test_loss_list.append(min_epoch_test_loss_list[-1])
+        test_loss_value = test(model, loss, data_test, logger, device)
+        if epoch == 0 or test_loss_value < min_test_loss:
+            min_test_loss = test_loss_value
+            min_test_loss_epoch = epoch
 
-        if not epoch % logging_step:
-            print(f'Train loss: {epoch_train_loss_list[-1]}, Epoch: {epoch}')
-            print(f'Test loss: {test_loss_value}, Epoch: {epoch}')
-            plt.figure()
-            plt.ylim((0, 10))
-            plt.plot(epoch_train_loss_list)
-            plt.plot(epoch_test_loss_list, c='orange')
-            plt.plot(min_epoch_test_loss_list, c='red')
-            plt.show()
+        if logger:
+            logger.log({
+                'train/loss': np.average(batch_train_loss_list),
+                'test/loss': test_loss_value,
+                'test/min_test_loss': min_test_loss,
+                'epoch': epoch
+            })
 
-        model_saver.save(model, epoch)
+        # print(f'Train loss: {epoch_train_loss_list[-1]}, Epoch: {epoch}')
+        # print(f'Test loss: {test_loss_value}, Epoch: {epoch}')
+        # if not epoch % logging_step:
+        # plt.figure()
+        # plt.ylim((0, 10))
+        # plt.plot(epoch_train_loss_list)
+        # plt.plot(epoch_test_loss_list, c='orange')
+        # plt.plot(min_epoch_test_loss_list, c='red')
+        # plt.show()
+        if model_saver:
+            model_saver.save(model, epoch)
 
-    model_saver.save(model, epochs)
+    if model_saver:
+        model_saver.save(model, epochs)
+
+    if logger:
+        logger.run.summary['min_test_loss'] = min_test_loss
+        logger.run.summary['min_test_loss_epoch'] = min_test_loss_epoch
+        logger.finish()
 
 
 if __name__ == '__main__':
     set_random_seed(SEED)
 
-    INIT_WEIGHT_PATH = '../../models/weights/ConvolutionalPoseMachines_4_stages/HMapsMSELoss/Adam_lr_1e-05_betas_(0o9_0o999)_eps_1e-08/ConvolutionalPoseMachines_E899_B5.pth'
+    INIT_WEIGHT_PATH = '../../models/weights/ConvolutionalPoseMachines___4_stages/HMapsMSELoss/Adam_lr_1e-05___betas_(0o9_0o999)_eps_1e-08/ConvolutionalPoseMachines_E899_B5.pth'
     ALPHA = 0.00001
     IMAGE_SIZE = (368, 368)
-    EPOCHS = 900
+    EPOCHS = 7
     TRAIN_BATCH_SIZE = 5
     TEST_BATCH_SIZE = 5
-    LOG_STEP = 30
+    # LOG_STEP = 30
+    N_SUBSTAGES = 3
     SAVE_MODEL_STEP = 90
-    START_EPOCH = 900
+    START_EPOCH = 0
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
@@ -103,7 +118,7 @@ if __name__ == '__main__':
                    'image': img_tform,
                    'keypoints': transforms.ToTensor()},
         heatmap=True)
-    data_train_loader = DataLoader(data_train, batch_size=TRAIN_BATCH_SIZE, shuffle=True, num_workers=0)
+    data_train_loader = DataLoader(data_train, batch_size=TRAIN_BATCH_SIZE, shuffle=True, num_workers=3)
 
     data_test = AnimalKeypointsDataset(
         json_file_path='../../dataset/cats/test/keypoints_annotations.json',
@@ -112,11 +127,11 @@ if __name__ == '__main__':
                    'image': img_tform,
                    'keypoints': transforms.ToTensor()},
         heatmap=True)
-    data_test_loader = DataLoader(data_test, batch_size=TEST_BATCH_SIZE, shuffle=True, num_workers=0)
+    data_test_loader = DataLoader(data_test, batch_size=TEST_BATCH_SIZE, shuffle=True, num_workers=3)
 
     model = ConvolutionalPoseMachines(
         n_keypoints=16,
-        n_substages=3,
+        n_substages=N_SUBSTAGES,
         n_base_ch=80,
         img_feat_ch=20
     ).to(device)
@@ -127,12 +142,26 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(model.parameters(), lr=ALPHA)
     loss = HMapsMSELoss().to(device)
 
-    model_saver = ModelSaver(model,
-                             TRAIN_BATCH_SIZE,
-                             save_freq=SAVE_MODEL_STEP,
-                             start_epoch=START_EPOCH,
-                             loss=loss,
-                             optimizer=optimizer)
+    model_saver = ModelSaver(
+        model,
+        TRAIN_BATCH_SIZE,
+        save_freq=SAVE_MODEL_STEP,
+        start_epoch=START_EPOCH,
+        loss=loss,
+        optimizer=optimizer
+    )
+
+    logger = Logger(
+        model,
+        IMAGE_SIZE,
+        EPOCHS,
+        TRAIN_BATCH_SIZE,
+        loss=loss,
+        optimizer=optimizer,
+        n_substages=N_SUBSTAGES,
+        dataset='cats',
+        start_epoch=START_EPOCH
+    )
 
     train(
         model=model,
@@ -141,7 +170,9 @@ if __name__ == '__main__':
         loss=loss,
         optimizer=optimizer,
         epochs=EPOCHS,
+        logger=logger,
         model_saver=model_saver,
-        logging_step=LOG_STEP,
         device=device
     )
+
+    # metrics, test, early stop, continue train, save model weights

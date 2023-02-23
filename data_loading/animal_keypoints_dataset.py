@@ -41,6 +41,7 @@ class AnimalKeypointsDataset(Dataset):
     def __init__(self, json_file_path, image_dir, transform=None, heatmap=False):
         with open(json_file_path, 'r') as f:
             self.json_data = json.load(f)
+        self.keypoint_names = list(self.json_data['keypoints']['0'].keys())
         self.image_dir = image_dir
         self.transform = transform
         self.heatmap = heatmap
@@ -51,6 +52,8 @@ class AnimalKeypointsDataset(Dataset):
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
             idx = idx.tolist()
+
+        # TODO: replace python iterables with numpy iterables
 
         idx = str(idx)
         image_name = self.json_data['images'][idx]['file_name']
