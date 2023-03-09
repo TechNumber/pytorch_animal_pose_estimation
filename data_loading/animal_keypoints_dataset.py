@@ -76,3 +76,8 @@ class AnimalKeypointsDataset(Dataset):
             sample['heatmap'] = create_heatmap(sample)
 
         return sample
+
+if __name__ == '__main__':
+    sample = AnimalKeypointsDataset(
+    json_file_path='../dataset/cats/train/keypoints_annotations.json',
+    image_dir='../dataset/cats/train/labeled/').__getitem__(2)

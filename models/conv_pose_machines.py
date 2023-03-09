@@ -92,7 +92,9 @@ class ConvolutionalPoseMachines(nn.Module):
                  n_substages: int,
                  n_base_ch: int = 64,
                  img_feat_ch: int = 16,
-                 include_bground_map=False):
+                 include_bground_map: bool = False,
+                 norm_layer: nn = nn.LayerNorm,
+                 act_layer: nn = nn.GELU):
         super().__init__()
 
         self.init_stage = InitialStage(
@@ -125,14 +127,14 @@ if __name__ == '__main__':
     input = torch.rand((5, 3, 368, 368), device=device)
     print('Input shape:', input.shape)
 
-    model = ConvolutionalPoseMachines(
-        n_keypoints=16,
-        n_substages=3,
-        n_base_ch=128,
-        img_feat_ch=32
-    ).to(device)
-
-    output = model(input)
-    print('Output shape:', output.shape)
+    with torch.inference_mode():
+        model = ConvolutionalPoseMachines(
+            n_keypoints=16,
+            n_substages=3,
+            n_base_ch=128,
+            img_feat_ch=32
+        ).to(device)
+        output = model(input)
+        print('Output shape:', output.shape)
     for c in model.children():
         print(c)
