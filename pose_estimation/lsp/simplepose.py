@@ -104,7 +104,7 @@ for epoch in range(1):
 
 # tb.close()
 
-# lsp_test = LSP('./dataset/lsp_dataset/', transform, image_size)
+# lsp_test = LSP('./datasets/lsp_dataset/', transform, image_size)
 
 dl_test = deeplake.load("hub://activeloop/lsp-test")
 lsp_test_loader = dl_test.pytorch(

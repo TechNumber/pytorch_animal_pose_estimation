@@ -27,7 +27,7 @@ def test(model,
                 columns=["true_keypoints", "pred_keypoints"] + \
                         [f"{k}_probability_heatmap" for k in data_test.dataset.keypoint_names]
             )
-            # img, kp = data_test.dataset[0]['image'].movedim(0, -1).cpu(), data_test.dataset[0]['keypoints']
+            # img, kp = data_test.datasets[0]['image'].movedim(0, -1).cpu(), data_test.datasets[0]['keypoints']
             sample = next(iter(data_test))
             img, kp = sample['image'][0].to(device).unsqueeze(0), sample['keypoints'][0].to(device)
 

@@ -1,12 +1,11 @@
 import os
 
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 
-from data_loading.animal_keypoints_dataset import AnimalKeypointsDataset
+from datasets.animal_keypoints_dataset import AKD
 from models.conv_pose_machines import ConvolutionalPoseMachines
 from pose_estimation.cats.test import test
 from utils.set_random_seed import set_random_seed, SEED
@@ -111,18 +110,18 @@ if __name__ == '__main__':
         transforms.ToTensor(),
     ])
 
-    data_train = AnimalKeypointsDataset(
-        json_file_path='../../dataset/cats/train/keypoints_annotations.json',
-        image_dir='../../dataset/cats/train/labeled/',
+    data_train = AKD(
+        json_file_path='../../datasets/cats_utils/train/keypoints_annotations.json',
+        image_dir='../../datasets/cats_utils/train/labeled/',
         transform={'all': all_tform,
                    'image': img_tform,
                    'keypoints': transforms.ToTensor()},
         heatmap=True)
     data_train_loader = DataLoader(data_train, batch_size=TRAIN_BATCH_SIZE, shuffle=True, num_workers=3)
 
-    data_test = AnimalKeypointsDataset(
-        json_file_path='../../dataset/cats/test/keypoints_annotations.json',
-        image_dir='../../dataset/cats/test/labeled/',
+    data_test = AKD(
+        json_file_path='../../datasets/cats_utils/test/keypoints_annotations.json',
+        image_dir='../../datasets/cats_utils/test/labeled/',
         transform={'all': all_tform,
                    'image': img_tform,
                    'keypoints': transforms.ToTensor()},
@@ -159,7 +158,7 @@ if __name__ == '__main__':
         loss=loss,
         optimizer=optimizer,
         n_substages=N_SUBSTAGES,
-        dataset='cats',
+        dataset='cats_utils',
         start_epoch=START_EPOCH
     )
 

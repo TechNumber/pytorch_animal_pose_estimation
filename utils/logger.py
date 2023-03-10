@@ -99,7 +99,7 @@ if __name__ == "__main__":
         loss,
         optimizer,
         n_substages=N_SUBSTAGES,
-        dataset='cats'
+        dataset='cats_utils'
     )
 
     logger.log({'train/loss': 1.4, 'train/acc': 0.6})
