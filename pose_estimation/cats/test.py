@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import wandb
 
-from visualization.keypoints import show_keypoints, show_hmaps
+from utils.visualization import show_plt_keypoints, show_hmaps
 
 
 def test(model,
@@ -38,8 +38,8 @@ def test(model,
             )).nonzero()[:, 1:].numpy() / (pred_hmaps.shape[-2], pred_hmaps.shape[-1])
 
             img = img[0].movedim(0, -1).cpu()
-            true_kp_img = show_keypoints(img, kp[-1].cpu(), show_edges=True, as_fig=True)
-            pred_kp_img = show_keypoints(img, pred_kp, show_edges=True, as_fig=True)
+            true_kp_img = show_plt_keypoints(img, kp[-1].cpu(), show_edges=True, as_fig=True)
+            pred_kp_img = show_plt_keypoints(img, pred_kp, show_edges=True, as_fig=True)
             pred_hmaps_imgs = show_hmaps(pred_hmaps, img, data_test.dataset.keypoint_names)
 
             table.add_data(wandb.Image(true_kp_img), wandb.Image(pred_kp_img), *map(wandb.Image, pred_hmaps_imgs))
