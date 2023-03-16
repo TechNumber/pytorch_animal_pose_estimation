@@ -1,0 +1,36 @@
+defaults:
+  - base_config
+  - train_augmentations.all:
+      - flip
+      - ratio_crop
+      - rotation
+  - train_augmentations.image:
+      - resize
+      - to_tensor
+  - test_augmentations.image:
+      - resize
+      - to_tensor
+  - callbacks:
+      - model_checkpoint
+      - lr_monitor
+#      - early_stopping
+  - _self_
+
+seed: 37
+#logger:
+#  resume: True
+#  id: 1nmd8q89
+trainer:
+  max_epochs: 600
+  accumulate_grad_batches: 2
+dataset:
+  num_workers: 4
+  batch_size: 8
+model:
+  n_substages: 6
+  n_base_ch: 128
+  img_feat_ch: 64
+  norm_layer: torch.nn.LayerNorm
+  drop_rate: 0.3
+metric:
+  thr: 0.1

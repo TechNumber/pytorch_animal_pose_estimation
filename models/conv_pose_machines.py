@@ -6,6 +6,8 @@ from omegaconf import DictConfig, OmegaConf
 from torch import Tensor
 from torch import nn
 
+from conf.config_dataclasses import Config
+
 
 class Conv2dBlock(nn.Module):
     def __init__(
@@ -36,21 +38,24 @@ class ImageFeatureBlock(nn.Module):
             n_base_ch: int,
             norm_layer: Optional[nn.Module] = None,
             act_layer: Optional[nn.Module] = None,
-            pool_layer: Optional[nn.Module] = None
+            pool_layer: Optional[nn.Module] = None,
+            drop_rate: Optional[float] = None
     ):
         super().__init__()
         self.norm = norm_layer(
-            3) if norm_layer else nn.Identity()  # TODO: check if model runs better without this norm (use albumentations' norm instead)
+            (368, 368)) if norm_layer else nn.Identity()  # TODO: check if model runs better without this norm (use albumentations' norm instead)
         self.blocks = nn.ModuleList([
             Conv2dBlock(3, n_base_ch, ker_size=9, pad=4, act_layer=act_layer, pool_layer=pool_layer),
             Conv2dBlock(n_base_ch, n_base_ch, ker_size=9, pad=4, act_layer=act_layer, pool_layer=pool_layer),
             Conv2dBlock(n_base_ch, n_base_ch, ker_size=9, pad=4, act_layer=act_layer, pool_layer=pool_layer)
         ])
+        self.drop = nn.Dropout(drop_rate) if drop_rate else nn.Identity()
 
     def forward(self, x: Tensor) -> Tensor:
         x = self.norm(x)
         for block in self.blocks:
             x = block(x)
+        x = self.drop(x)
         return x
 
 
@@ -61,13 +66,13 @@ class InitialStage(nn.Module):
             n_base_ch: int,
             norm_layer: Optional[nn.Module] = None,
             act_layer: Optional[nn.Module] = None,
-            pool_layer: Optional[nn.Module] = None
+            pool_layer: Optional[nn.Module] = None,
+            drop_rate: Optional[float] = None
     ):
         super().__init__()
 
-        self.norm = norm_layer(n_maps) if norm_layer else nn.Identity()
         self.blocks = nn.ModuleList([
-            ImageFeatureBlock(n_base_ch, norm_layer, act_layer, pool_layer),
+            ImageFeatureBlock(n_base_ch, norm_layer, act_layer, pool_layer, drop_rate),
             Conv2dBlock(n_base_ch, n_base_ch // 4, ker_size=5, pad=2, act_layer=act_layer),
             Conv2dBlock(n_base_ch // 4, n_base_ch * 4, ker_size=9, pad=4, act_layer=act_layer),
             Conv2dBlock(n_base_ch * 4, n_base_ch * 4, ker_size=1, pad=0, act_layer=act_layer),
@@ -75,7 +80,6 @@ class InitialStage(nn.Module):
         ])
 
     def forward(self, x: Tensor) -> Tensor:
-        x = self.norm(x)
         for block in self.blocks:
             x = block(x)
         return x
@@ -88,13 +92,14 @@ class SubsequentStage(nn.Module):
             img_feat_ch: int,
             n_base_ch: int,
             norm_layer: Optional[nn.Module] = None,
-            act_layer: Optional[nn.Module] = None
+            act_layer: Optional[nn.Module] = None,
+            drop_rate: Optional[float] = None
     ):
         super().__init__()
 
         self.conv_1 = Conv2dBlock(n_base_ch, img_feat_ch, ker_size=5, pad=2, act_layer=act_layer)
 
-        self.norm = norm_layer(n_maps + img_feat_ch) if norm_layer else nn.Identity()
+        self.norm = norm_layer((45, 45)) if norm_layer else nn.Identity()
         self.blocks = nn.ModuleList([
             Conv2dBlock(n_maps + img_feat_ch, n_base_ch, ker_size=11, pad=5, act_layer=act_layer),
             Conv2dBlock(n_base_ch, n_base_ch, ker_size=11, pad=5, act_layer=act_layer),
@@ -102,6 +107,7 @@ class SubsequentStage(nn.Module):
             Conv2dBlock(n_base_ch, n_base_ch, ker_size=1, pad=0, act_layer=act_layer),
             Conv2dBlock(n_base_ch, n_maps, ker_size=1, pad=0)
         ])
+        self.drop = nn.Dropout(drop_rate) if drop_rate else nn.Identity()
 
     def forward(self, x: Tensor, img_ref: Tensor) -> Tensor:
         img_ref = self.conv_1(img_ref)
@@ -109,31 +115,37 @@ class SubsequentStage(nn.Module):
         x = self.norm(x)
         for block in self.blocks:
             x = block(x)
+        x = self.drop(x)
         return x
 
 
 class ConvolutionalPoseMachines(nn.Module):
 
-    def __init__(self, cfg: DictConfig):  # TODO: replace with config class
+    def __init__(self, cfg: Config):
         super().__init__()
         self.cfg = cfg
 
-        norm_layer = hydra.utils.get_class(cfg.model.norm_layer) if 'norm_layer' in cfg else None
-        act_layer = hydra.utils.get_class(cfg.model.act_layer) if 'act_layer' in cfg else None
-        pool_layer = hydra.utils.get_class(cfg.model.pool_layer) if 'pool_layer' in cfg else None
+        if 'norm_layer' in cfg.model:
+            norm_layer = cfg.model.norm_layer and hydra.utils.get_class(cfg.model.norm_layer)
+        if 'act_layer' in cfg.model:
+            act_layer = cfg.model.act_layer and hydra.utils.get_class(cfg.model.act_layer)
+        if 'pool_layer' in cfg.model:
+            pool_layer = cfg.model.pool_layer and hydra.utils.get_class(cfg.model.pool_layer)
         self.init_stage = InitialStage(
             n_maps=cfg.dataset.n_keypoints + cfg.dataset.include_bground_map,
             n_base_ch=cfg.model.n_base_ch,
             norm_layer=norm_layer,
             act_layer=act_layer,
-            pool_layer=pool_layer
+            pool_layer=pool_layer,
+            drop_rate=cfg.model.drop_rate
         )
 
         self.img_feat = ImageFeatureBlock(
             n_base_ch=cfg.model.n_base_ch,
             norm_layer=norm_layer,
             act_layer=act_layer,
-            pool_layer=pool_layer
+            pool_layer=pool_layer,
+            drop_rate=cfg.model.drop_rate
         )
 
         self.subsequent_stages_list = nn.ModuleList(
@@ -142,7 +154,8 @@ class ConvolutionalPoseMachines(nn.Module):
                 img_feat_ch=cfg.model.img_feat_ch,
                 n_base_ch=cfg.model.n_base_ch,
                 norm_layer=norm_layer,
-                act_layer=act_layer
+                act_layer=act_layer,
+                drop_rate=cfg.model.drop_rate
             ) for i in range(cfg.model.n_substages)]
         )
 
@@ -153,7 +166,7 @@ class ConvolutionalPoseMachines(nn.Module):
         for sub_stage in self.subsequent_stages_list:
             outputs.append(sub_stage(outputs[-1], img_ref))
 
-        return torch.stack(outputs, dim=1)
+        return torch.stack(outputs, dim=0)
 
 
 if __name__ == '__main__':
@@ -164,13 +177,14 @@ if __name__ == '__main__':
 
     cfg = DictConfig({
         'model': {
-            'n_keypoints': 16,
             'n_substages': 3,
             'n_base_ch': 128,
             'img_feat_ch': 32,
-            'include_bground_map': False},
+            'act_layer': 'torch.nn.GELU',
+            'pool_layer': 'torch.nn.MaxPool2d'
+        },
         'dataset': {
-            'n_keypoints': 15,
+            'n_keypoints': 16,
             'include_bground_map': False
         }
     })

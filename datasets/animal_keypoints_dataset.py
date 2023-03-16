@@ -75,8 +75,8 @@ class AKD(Dataset):
         image_name = self._json_data['images'][idx]['file_name']
         image_path = os.path.join(self._images_folder, image_name)
         image = Image.open(fp=image_path).convert('RGB')
-        keypoints = np.array(list(self._json_data['keypoints'][idx].values()))
-        keypoints = keypoints.astype('float32').reshape(-1, 3)
+        keypoints = torch.FloatTensor(list(self._json_data['keypoints'][idx].values())).view(-1, 3)
+        # keypoints = keypoints.astype('float32').reshape(-1, 3)
         sample = {'image': image, 'keypoints': keypoints}
 
         if self._all_transform:
@@ -87,7 +87,7 @@ class AKD(Dataset):
             sample['keypoints'] = self._target_transform(sample['keypoints'])
 
         if self._heatmap_size:
-            sample['heatmap'] = self._create_heatmap(sample)
+            sample['heatmap'] = self._create_heatmap(sample['keypoints'])
 
         if not self._produce_visibility:
             sample['keypoints'] = sample['keypoints'][:, :2]
@@ -112,9 +112,8 @@ class AKD(Dataset):
             -((x - mean_x) ** 2 / std_x ** 2 + (y - mean_y) ** 2 / std_y ** 2) / 2
         )
 
-    def _create_heatmap(self, sample):
+    def _create_heatmap(self, keypoints):
         STD = 1.5
-        image, keypoints = sample['image'], sample['keypoints']
         nkp = len(keypoints)
         height, width = self._heatmap_size[0], self._heatmap_size[1]
         heatmap = torch.zeros(size=(nkp, height, width), dtype=torch.float32)
