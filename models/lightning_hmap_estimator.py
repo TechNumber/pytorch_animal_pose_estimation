@@ -54,17 +54,15 @@ class LitHMapEstimator(pl.LightningModule):
         metric = self.metric(kp_pred, kp_true)
 
         self.logger.log_image('predicted_keypoints', show_keypoints(kp_pred, img))
+        self.log_dict({'test/loss': loss, 'test/metric': metric}, on_step=False, on_epoch=True)
         # self.experiment.logger.log({'test/loss': loss, 'test/metric': metric, 'test/predicted_keypoints': wandb.Image(img)})
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
         img = batch['image']
         hmap_pred = self.model(img)
-        kp_pred = hmap_to_keypoints(hmap_pred[-1]).unsqueeze(-3)
-        img = functional.convert_image_dtype(img, dtype=torch.uint8)
-        print(img.shape, kp_pred.shape)
-        img = [draw_keypoints(img[i], kp_pred[i], colors="blue", radius=3) for i in range(len(img))]
-        img = make_grid(img, nrow=4)
-        return kp_pred, img
+        kp_pred = hmap_to_keypoints(hmap_pred[-1])
+
+        return kp_pred, show_keypoints(kp_pred, img)
 
     def _calc_loss_metric(self, batch, batch_idx):
         img, hmap_true = batch['image'], batch['heatmap']

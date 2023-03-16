@@ -1,52 +1,30 @@
-import numpy as np
-import torch
-import wandb
+import hydra
+from hydra.utils import instantiate
+from omegaconf import OmegaConf
+from pytorch_lightning import seed_everything, Trainer
 
-from utils.visualization import show_plt_keypoints, show_hmaps
+from conf.config_dataclasses import Config
 
 
-def test(model,
-         loss,
-         data_test,
-         logger=None,
-         device=torch.device('cpu')):
-    loss_value_list = []
-    model.eval()
-    with torch.inference_mode():
-        for batch, batch_data in enumerate(data_test):
-            test_img = batch_data['image'].to(device)
-            test_hmap = batch_data['heatmap'].to(device)
+def test(cfg: Config):
+    seed_everything(cfg.seed, workers=True)
 
-            pred_hmaps = model(test_img)
+    PATH = 'checkpoints/epoch=45-step=414.ckpt'
+    module = hydra.utils.get_class(cfg.lit_module._target_).load_from_checkpoint(
+        checkpoint_path=PATH
+    )
+    dataset = instantiate(cfg.dataset.init, cfg=cfg)
+    callbacks = cfg.callbacks and list(instantiate(cfg.callbacks).values())
+    logger = instantiate(cfg.logger)
+    trainer = Trainer(**cfg.trainer, logger=logger, callbacks=callbacks)
+    trainer.test(module, dataset)
 
-            loss_value = loss(pred_hmaps, test_hmap.unsqueeze(1)).item()
-            loss_value_list.append(loss_value)
 
-        if logger:
-            table = wandb.Table(
-                columns=["true_keypoints", "pred_keypoints"] + \
-                        [f"{k}_probability_heatmap" for k in data_test.dataset.keypoint_names]
-            )
-            # img, kp = data_test.datasets[0]['image'].movedim(0, -1).cpu(), data_test.datasets[0]['keypoints']
-            sample = next(iter(data_test))
-            img, kp = sample['image'][0].to(device).unsqueeze(0), sample['keypoints'][0].to(device)
+@hydra.main(version_base=None, config_path='../../conf', config_name='config')
+def test_model(cfg: Config) -> None:
+    print(OmegaConf.to_yaml(cfg, resolve=False))
+    test(cfg)
 
-            pred_hmaps = model(img)
-            pred_hmaps = pred_hmaps[-1][-1].movedim(-2, -1).detach().cpu()
-            pred_kp = (pred_hmaps == torch.amax(
-                pred_hmaps, dim=(-2, -1), keepdim=True
-            )).nonzero()[:, 1:].numpy() / (pred_hmaps.shape[-2], pred_hmaps.shape[-1])
 
-            img = img[0].movedim(0, -1).cpu()
-            true_kp_img = show_plt_keypoints(img, kp[-1].cpu(), show_edges=True, as_fig=True)
-            pred_kp_img = show_plt_keypoints(img, pred_kp, show_edges=True, as_fig=True)
-            pred_hmaps_imgs = show_hmaps(pred_hmaps, img, data_test.dataset.keypoint_names)
-
-            table.add_data(wandb.Image(true_kp_img), wandb.Image(pred_kp_img), *map(wandb.Image, pred_hmaps_imgs))
-            # for img, pred, targ, prob in zip(images.to("cpu"), predicted.to("cpu"), labels.to("cpu"), probs.to("cpu")):
-            #     table.add_data(wandb.Image(img[0].numpy() * 255), pred, targ, *prob.numpy())
-            wandb.log({"predictions_table": table}, commit=False)
-
-    avg_loss_value = np.average(loss_value_list)
-
-    return avg_loss_value
+if __name__ == '__main__':
+    test_model()

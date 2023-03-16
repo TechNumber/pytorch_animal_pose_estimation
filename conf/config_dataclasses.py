@@ -170,7 +170,7 @@ class EarlyStoppingConfig:
         monitor: str = 'val/loss'
         mode: str = 'min'
         patience: int = 10
-        min_delta: float = 0.001  # TODO: adjust
+        min_delta: float = 0.001
         verbose: bool = True
 
     early_stopping: EarlyStoppingParams = field(default=EarlyStoppingParams)

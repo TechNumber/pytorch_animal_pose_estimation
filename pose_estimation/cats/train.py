@@ -1,24 +1,11 @@
-import os
-
 import hydra
-import numpy as np
-import torch
-import torchvision.transforms as transforms
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
 from pytorch_lightning import seed_everything, Trainer
-from torch.utils.data import DataLoader
 
 from conf.config_dataclasses import Config
-from datasets.animal_keypoints_dataset import AKD
-from models.conv_pose_machines import ConvolutionalPoseMachines
-from pose_estimation.cats.test import test
-from utils.set_random_seed import set_random_seed, SEED
-from utils.losses import HMapsMSELoss
-from utils.model_saver import ModelSaver
-from utils.transforms import RandomRotation, RandomFlip, RandomRatioCrop
-from utils.logger import Logger
 
+# -------BEFORE PYTORCH LIGHTNING-------
 
 # def train(model,
 #           data_train,
@@ -97,6 +84,7 @@ def train(cfg: Config):
     logger = instantiate(cfg.logger)
     trainer = Trainer(**cfg.trainer, logger=logger, callbacks=callbacks)
     trainer.fit(module, dataset)
+    trainer.test(module, dataset)
 
 
 @hydra.main(version_base=None, config_path='../../conf', config_name='config')
@@ -107,6 +95,8 @@ def train_model(cfg: Config) -> None:
 
 if __name__ == '__main__':
     train_model()
+
+    # -------BEFORE PYTORCH LIGHTNING-------
 
     # INIT_WEIGHT_PATH = '../../models/weights/ConvolutionalPoseMachines___4_stages/HMapsMSELoss/Adam_lr_1e-05___betas_(0o9_0o999)_eps_1e-08/ConvolutionalPoseMachines_E899_B5.pth'
     # ALPHA = 0.00001
