@@ -29,7 +29,7 @@ class RandomRotation(object):
                 kp[0] = (x_c + R * cos(pi - asin((y - y_c) / R) - rad)) / w
                 kp[1] = (y_c + R * sin(pi - asin((y - y_c) / R) - rad)) / h
 
-            if not (0 <= kp[0] <= 1 and 0 <= kp[1] <= 1):  # TODO: create dedicated transformer for visibility check
+            if not (0 <= kp[0] <= 1 and 0 <= kp[1] <= 1):
                 kp[2] = 0
 
         image = TF.rotate(image, angle, expand=False, center=None)
