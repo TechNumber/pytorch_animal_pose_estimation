@@ -1,6 +1,7 @@
 # Animal Pose Estimation
 
-Insert description
+This repository presents a pipeline for training and testing Convolutional Pose Machines model on self-made animal
+keypoints dataset for pose prediction.
 
 ## Approach
 
@@ -15,16 +16,24 @@ Insert description
 random rotation. Впоследствии планируется заменить вручную написанные аугментации на более универсальные
 Albumentations-аугментации.
 
+Model used in current pipeline is based on Convolutional Pose Machines model described in
+[this paper](https://arxiv.org/pdf/1602.00134.pdf). Normalization was added to the model (class of normalization layer
+is specified in `model.norm_layer` field of config file), as well as dropout (dropout value is specified in the
+`model.drop_rate` field of the config file). The model was trained on self-labeled tiny dataset of cat images. Due to
+small size of the dataset, augmentations such as: random flip, random crop, random rotation were used to increase
+variety of training examples during training. It is planned to replace self-written augmentations
+(`utils/transforms.py`) with more universal Albumentations ones.
+
 ## Available models
 
-|            Name             | Params |     |
-|:---------------------------:|--------|-----|
-| Convolutional Pose Machines | 40.2 M |     |
+|            Name             | Params | Estimated model params size (MB) |
+|:---------------------------:|:------:|:--------------------------------:|
+| Convolutional Pose Machines | 40.2 M |              160.82              |
 
 ## Available datasets
 
-At the moment, there is one self-made dataset available. It is planned to use existing ready-made animal pose datasets
-in the future.
+At the moment, there is only one dataset available. It is planned to use existing ready-made animal pose datasets in the
+future.
 
 |           Name           | Train data size | Validation data size | Test data size | Sample fields                                                                                                                                                                                                                                                    |
 |:------------------------:|:---------------:|:--------------------:|:--------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -38,8 +47,8 @@ in the future.
 
 ### Keypoints
 
-Поле "keypoints" записи из датасета хранит в себе тензор размера (16, 3) с координатами опорных точек скелета. Опорные
-точки записаны в следующем порядке:
+`keypoints` field of the dataset entry stores a tensor of shape (16, 3), which contains coordinates of skeleton points.
+Keypoints are stored in the following order:
 
 - head
 - upper spine
@@ -100,7 +109,7 @@ config file.
 
 Все основные манипуляции с параметрами и структурой пайплайна выполняются через конфигурационный файл config.yaml в
 директории conf. При добавлении новых моделей, датасетов и т.д. рекомендуется создавать их через конфиг, а не напрямую
-в коде, поскольку проект заточен под метод instantiating модуля hydra, избегая прямого вызова конструктора объекта. 
+в коде, поскольку проект заточен под метод instantiating модуля hydra, избегая прямого вызова конструктора объекта.
 
 Конфигурационный файл содержит следующие поля:
 
@@ -113,7 +122,7 @@ optimizer: optimizer that will tune weights during training
 scheduler: scheduler for non-constant learning rate
 dataset: dataset on which model will be fitted
 trainer: trainer parameters like "max_epochs", "accelerator", etc.
-logger: logger (e.g. WandbLogger) used to log loss, metric and other values passed to self.log() in LitModule 
+logger: logger (e.g. WandbLogger) used to log loss, metric and other values passed to self.log() in LitModule
 train_augmentations:
   all:
     - augmentations that will
@@ -123,11 +132,11 @@ train_augmentations:
     - augmentations that will
     - affect only image
     - during training
-  target:  
+  target:
     - augmentations that will
     - affect only keypoints
     - during training
-test_augmentations:  
+test_augmentations:
   all:
     - same as
     - above
@@ -137,7 +146,7 @@ test_augmentations:
   target:
     - test
 callbacks:
-  - list of 
+  - list of
   - Pytorch Lightning callbacks
   - (e.g. LearningRateMonitor, ModelCheckpoint)
 seed: seed that will be set for all random generators
@@ -148,4 +157,50 @@ Available values for group fields, listed above, can be seen in models.config_da
 
 ## Installation
 
+Clone this repository:
 
+```
+git clone https://github.com/sangyun884/pytorch_course_animal_pose_estimation.git
+cd ./pytorch_course_animal_pose_estimation/
+```
+
+Install PyTorch and other dependencies:
+
+```
+conda create -n {env_name} python=3.10
+conda activate {env_name}
+conda install pytorch torchvision pytorch-cuda=11.7 -c pytorch -c nvidia
+# OR if your PC does not have GPU:
+conda install pytorch torchvision cpuonly -c pytorch
+conda install torchmetrics pytorch-lightning hydra-core wandb matplotlib matplotlib-inline numpy omegaconf -c conda-forge
+pip install Pillow
+```
+
+## Training and inference
+
+1. Log into your WandB acount:
+
+```bash
+wandb login
+```
+
+2. Download Convolutional Pose
+   Machines [checkpoint](https://drive.google.com/file/d/1UONeZoJomBdrT-DzDh_j0UPWjd_zUQUP/view?usp=sharing).
+2. Put downloaded .ckpt file into pose_estimation/cats/checkpoints folder.
+3. Uncomment `checkpoint_path:` field in conf/config.yaml and replace `'./checkpoints/last.ckpt'`
+   with `'./checkpoints/{name of downloaded file}.ckpt'`.
+4. Run this command for testing:
+
+```python
+python3
+pose_estimation / cats / test.py
+```
+
+5. Run this command for training:
+
+```python
+python3
+pose_estimation / cats / train.py
+```
+
+Results will appear in your WandB "animal_pose_estimation" project.
