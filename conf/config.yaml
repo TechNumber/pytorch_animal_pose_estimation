@@ -17,11 +17,12 @@ defaults:
   - _self_
 
 seed: 37
+#checkpoint_path: './checkpoints/last.ckpt'
 #logger:
-#  resume: True
-#  id: 1nmd8q89
+#  resume: "must"
+#  id:
 trainer:
-  max_epochs: 600
+  max_epochs: 500
   accumulate_grad_batches: 2
 dataset:
   num_workers: 4

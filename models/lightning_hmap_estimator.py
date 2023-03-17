@@ -38,12 +38,12 @@ class LitHMapEstimator(pl.LightningModule):
             wandb.watch(self.model, log='all', log_freq=100)
 
         loss, metric = self._calc_loss_metric(batch, batch_idx)
-        self.log_dict({'train/loss': loss, 'train/metric': metric}, on_step=False, on_epoch=True)  # TODO: разобраться с логированием
+        self.log_dict({'train_loss': loss, 'train_metric': metric}, on_step=False, on_epoch=True)  # TODO: разобраться с логированием
         return loss
 
     def validation_step(self, batch, batch_idx):
         loss, metric = self._calc_loss_metric(batch, batch_idx)
-        self.log_dict({'val/loss': loss, 'val/metric': metric}, on_step=False, on_epoch=True)
+        self.log_dict({'val_loss': loss, 'val_metric': metric}, on_step=False, on_epoch=True)
 
     def test_step(self, batch, batch_idx):
         img, hmap_true = batch['image'], batch['heatmap']
@@ -54,7 +54,7 @@ class LitHMapEstimator(pl.LightningModule):
         metric = self.metric(kp_pred, kp_true)
 
         self.logger.log_image('predicted_keypoints', show_keypoints(kp_pred, img))
-        self.log_dict({'test/loss': loss, 'test/metric': metric}, on_step=False, on_epoch=True)
+        self.log_dict({'test_loss': loss, 'test_metric': metric}, on_step=False, on_epoch=True)
         # self.experiment.logger.log({'test/loss': loss, 'test/metric': metric, 'test/predicted_keypoints': wandb.Image(img)})
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):

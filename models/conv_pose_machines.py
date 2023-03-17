@@ -125,12 +125,10 @@ class ConvolutionalPoseMachines(nn.Module):
         super().__init__()
         self.cfg = cfg
 
-        if 'norm_layer' in cfg.model:
-            norm_layer = cfg.model.norm_layer and hydra.utils.get_class(cfg.model.norm_layer)
-        if 'act_layer' in cfg.model:
-            act_layer = cfg.model.act_layer and hydra.utils.get_class(cfg.model.act_layer)
-        if 'pool_layer' in cfg.model:
-            pool_layer = cfg.model.pool_layer and hydra.utils.get_class(cfg.model.pool_layer)
+        norm_layer = 'norm_layer' in cfg.model and cfg.model.norm_layer and hydra.utils.get_class(cfg.model.norm_layer)
+        act_layer = 'act_layer' in cfg.model and cfg.model.act_layer and hydra.utils.get_class(cfg.model.act_layer)
+        pool_layer = 'pool_layer' in cfg.model and cfg.model.pool_layer and hydra.utils.get_class(cfg.model.pool_layer)
+
         self.init_stage = InitialStage(
             n_maps=cfg.dataset.n_keypoints + cfg.dataset.include_bground_map,
             n_base_ch=cfg.model.n_base_ch,

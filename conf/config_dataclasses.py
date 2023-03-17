@@ -23,7 +23,7 @@ class CPMConfig:
     norm_layer: Optional[str] = None
     act_layer: str = 'torch.nn.GELU'
     pool_layer: str = 'torch.nn.MaxPool2d'
-    drop_rate: float = 0.
+    drop_rate: Optional[float] = 0.
     n_substages: int = 3
     n_base_ch: int = 128
     img_feat_ch: int = 32
@@ -140,15 +140,20 @@ class ToTensorConfig:
     to_tensor: ToTensorParams = field(default=ToTensorParams)
 
 
+OmegaConf.register_new_resolver("class_name", lambda x: x.split('.')[-1].lower())
+
+
 @dataclass
 class ModelCheckpointConfig:
     @dataclass
     class ModelCheckpointParams:
         _target_: str = 'pytorch_lightning.callbacks.model_checkpoint.ModelCheckpoint'
         dirpath: str = 'checkpoints'
+        filename: Optional[str] = '${class_name:${model.init._target_}}-{epoch}-{step}-{val_metric:.2f}-{val_loss:.2f}'
         save_top_k: int = 2
-        monitor: str = 'val/loss'
-        mode: str = 'min'
+        save_last: Optional[bool] = True
+        monitor: str = 'val_metric'
+        mode: str = 'max'
 
     model_checkpoint: ModelCheckpointParams = field(default=ModelCheckpointParams)
 
@@ -167,10 +172,10 @@ class EarlyStoppingConfig:
     @dataclass
     class EarlyStoppingParams:
         _target_: str = 'pytorch_lightning.callbacks.EarlyStopping'
-        monitor: str = 'val/loss'
-        mode: str = 'min'
-        patience: int = 10
-        min_delta: float = 0.001
+        monitor: str = 'val_metric'
+        mode: str = 'max'
+        patience: int = 50
+        min_delta: float = 0.05
         verbose: bool = True
 
     early_stopping: EarlyStoppingParams = field(default=EarlyStoppingParams)
@@ -252,6 +257,7 @@ class Config:
     logger: Any = MISSING
 
     seed: int = 37
+    checkpoint_path: Optional[str] = None
 
 
 cs.store(name='base_config', node=Config)
@@ -260,7 +266,6 @@ cs.store(name='base_config', node=Config)
 @hydra.main(version_base=None, config_name='config', config_path='./')
 def read_config(cfg: Config):
     print(OmegaConf.to_yaml(cfg))
-
 
 
 if __name__ == '__main__':

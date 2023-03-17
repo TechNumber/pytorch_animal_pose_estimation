@@ -78,7 +78,12 @@ from conf.config_dataclasses import Config
 def train(cfg: Config):
     seed_everything(cfg.seed, workers=True)
 
-    module = instantiate(cfg.lit_module, cfg=cfg)
+    if cfg.checkpoint_path:
+        module = hydra.utils.get_class(cfg.lit_module._target_).load_from_checkpoint(
+            checkpoint_path=cfg.checkpoint_path
+        )
+    else:
+        module = instantiate(cfg.lit_module, cfg=cfg)
     dataset = instantiate(cfg.dataset.init, cfg=cfg)
     callbacks = cfg.callbacks and list(instantiate(cfg.callbacks).values())
     logger = instantiate(cfg.logger)
@@ -89,7 +94,7 @@ def train(cfg: Config):
 
 @hydra.main(version_base=None, config_path='../../conf', config_name='config')
 def train_model(cfg: Config) -> None:
-    print(OmegaConf.to_yaml(cfg, resolve=False))
+    print(OmegaConf.to_yaml(cfg, resolve=True))
     train(cfg)
 
 

@@ -9,10 +9,12 @@ from conf.config_dataclasses import Config
 def test(cfg: Config):
     seed_everything(cfg.seed, workers=True)
 
-    PATH = 'checkpoints/epoch=45-step=414.ckpt'
-    module = hydra.utils.get_class(cfg.lit_module._target_).load_from_checkpoint(
-        checkpoint_path=PATH
-    )
+    if cfg.checkpoint_path:
+        module = hydra.utils.get_class(cfg.lit_module._target_).load_from_checkpoint(
+            checkpoint_path=cfg.checkpoint_path
+        )
+    else:
+        module = instantiate(cfg.lit_module, cfg=cfg)
     dataset = instantiate(cfg.dataset.init, cfg=cfg)
     callbacks = cfg.callbacks and list(instantiate(cfg.callbacks).values())
     logger = instantiate(cfg.logger)
@@ -22,7 +24,7 @@ def test(cfg: Config):
 
 @hydra.main(version_base=None, config_path='../../conf', config_name='config')
 def test_model(cfg: Config) -> None:
-    print(OmegaConf.to_yaml(cfg, resolve=False))
+    print(OmegaConf.to_yaml(cfg, resolve=True))
     test(cfg)
 
 
