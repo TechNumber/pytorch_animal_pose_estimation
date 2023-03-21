@@ -94,6 +94,25 @@ purple - to non-visible points):
 
 ![Samples with heatmaps](./samples_with_hmaps.png)
 
+## Results 
+
+### Loss
+
+![Train/Validation MSE](./train_val_mse.svg)
+
+### Metric
+
+![Train/Validation PCK@0.1](./train_val_pck.svg)
+
+### Predictions
+
+Along with anatomically correct predictions, Convolutional Pose Machine still confuses symmetric parts and generates
+noisy results.
+
+![Predicted keypoints](./predicted_keypoints_1.png)
+![Predicted keypoints](./predicted_keypoints_2.png)
+![Predicted keypoints](./predicted_keypoints_3.png)
+
 ## Config
 
 Most of the changes of pipeline's structure and parameters are made by modifying configuration file `config.yaml` in
@@ -176,7 +195,7 @@ wandb login
 ```
 
 2. Download Convolutional Pose
-   Machines [checkpoint](https://drive.google.com/file/d/1UONeZoJomBdrT-DzDh_j0UPWjd_zUQUP/view?usp=sharing).
+   Machines [checkpoint](https://drive.google.com/file/d/1ISfAmiquXDV5fx8yLeWuKdtLcVqO5XX0/view?usp=sharing).
 2. Put downloaded .ckpt file into pose_estimation/cats/checkpoints folder.
 3. Uncomment `checkpoint_path:` field in conf/config.yaml and replace `'./checkpoints/last.ckpt'`
    with `'./checkpoints/{name of downloaded file}.ckpt'`.
